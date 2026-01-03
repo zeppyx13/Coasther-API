@@ -10,7 +10,7 @@ const app = express();
 const db = require("./config/db");
 const PORT = process.env.PORT || 5000;
 // init routes
-
+const authRoutes = require("./routes/auth.routes");
 // Middleware
 app.use(helmet());
 
@@ -33,7 +33,7 @@ app.get("/", (req, res) => {
     message: "Welcome to Coasther API",
   });
 });
-
+app.use("/api/auth", authRoutes);
 // Start the server after verifying DB connection
 (async () => {
   try {
