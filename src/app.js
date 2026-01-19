@@ -11,6 +11,8 @@ const paymentRoutes = require("./routes/payment.routes");
 const app = express();
 
 // Middleware
+const notFound = require("./middlewares/notFound.middleware");
+const errorHandler = require("./middlewares/error.middleware");
 app.use(helmet());
 app.use(
   cors({
@@ -35,4 +37,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/tenants", tenantRoutes);
 app.use("/api/payments", paymentRoutes);
+// 404 handler
+app.use(notFound);
+app.use(errorHandler);
 module.exports = app;
