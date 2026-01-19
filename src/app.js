@@ -11,6 +11,7 @@ const db = require("./config/db");
 const PORT = process.env.PORT || 5000;
 // init routes
 const authRoutes = require("./routes/auth.routes");
+const roomRoutes = require("./routes/room.routes");
 // Middleware
 app.use(helmet());
 
@@ -19,7 +20,7 @@ app.use(
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  }),
 );
 
 app.use(express.json());
@@ -34,6 +35,7 @@ app.get("/", (req, res) => {
   });
 });
 app.use("/api/auth", authRoutes);
+app.use("/api/rooms", roomRoutes);
 // Start the server after verifying DB connection
 (async () => {
   try {
