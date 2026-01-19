@@ -31,7 +31,6 @@ async function iotAuth(req, res, next) {
       throw err;
     }
 
-    // tempelkan ke req untuk dipakai service
     req.meter = rows[0];
     req.device_uid = deviceUid;
 
