@@ -7,7 +7,7 @@ const morgan = require("morgan");
 const authRoutes = require("./routes/auth.routes");
 const roomRoutes = require("./routes/room.routes");
 const tenantRoutes = require("./routes/tenant.routes");
-
+const paymentRoutes = require("./routes/payment.routes");
 const app = express();
 
 // Middleware
@@ -34,5 +34,5 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/tenants", tenantRoutes);
-
+app.use("/api/payments", paymentRoutes);
 module.exports = app;
