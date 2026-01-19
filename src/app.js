@@ -8,6 +8,7 @@ const authRoutes = require("./routes/auth.routes");
 const roomRoutes = require("./routes/room.routes");
 const tenantRoutes = require("./routes/tenant.routes");
 const paymentRoutes = require("./routes/payment.routes");
+const iotRoutes = require("./routes/iot.routes");
 const app = express();
 
 // Middleware
@@ -37,6 +38,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/tenants", tenantRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/iot", iotRoutes);
 // 404 handler
 app.use(notFound);
 app.use(errorHandler);
