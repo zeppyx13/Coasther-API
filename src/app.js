@@ -12,6 +12,7 @@ const iotRoutes = require("./routes/iot.routes");
 const announcementRoutes = require("./routes/announcement.routes");
 const reviewRoutes = require("./routes/review.routes");
 const complaintRoutes = require("./routes/complaint.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
 // app init
 const app = express();
 
@@ -46,6 +47,7 @@ app.use("/api/iot", iotRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/complaints", complaintRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 // 404 handler
 app.use(notFound);
 app.use(errorHandler);
