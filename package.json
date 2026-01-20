@@ -7,7 +7,9 @@
   "type": "commonjs",
   "main": "src/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "billing:test": "node -e \"require('dotenv').config(); const { runMonthlyBilling } = require('./src/jobs/scheduler'); runMonthlyBilling('2026-01')\"",
+    "billing:month": "node src/scripts/runMonthlyBilling.js",
+    "billing:prev": "node src/scripts/runMonthlyBillingPrev.js",
     "start": "nodemon index.js"
   },
   "dependencies": {
@@ -20,6 +22,7 @@
     "midtrans-client": "^1.4.3",
     "morgan": "^1.10.1",
     "mysql2": "^3.16.0",
+    "node-cron": "^4.2.1",
     "nodemon": "^3.1.11",
     "zod": "^4.3.4"
   }
