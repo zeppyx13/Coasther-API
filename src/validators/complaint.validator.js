@@ -16,7 +16,6 @@ const updateComplaintSchema = z
   })
   .refine(
     (data) => {
-      // tenant hanya boleh set status jadi 'closed' (tidak boleh open/in_progress)
       if (data.status && data.status !== "closed") return false;
       return true;
     },
