@@ -9,6 +9,8 @@ const roomRoutes = require("./routes/room.routes");
 const tenantRoutes = require("./routes/tenant.routes");
 const paymentRoutes = require("./routes/payment.routes");
 const iotRoutes = require("./routes/iot.routes");
+const announcementRoutes = require("./routes/announcement.routes");
+// app init
 const app = express();
 
 // Middleware
@@ -39,6 +41,7 @@ app.use("/api/rooms", roomRoutes);
 app.use("/api/tenants", tenantRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/iot", iotRoutes);
+app.use("/api/announcements", announcementRoutes);
 // 404 handler
 app.use(notFound);
 app.use(errorHandler);
