@@ -2,8 +2,7 @@ import axios from "axios";
 import { getToken } from "./storage";
 
 export const api = axios.create({
-  baseURL: "http://10.0.2.2:5000", // Android emulator
-  // baseURL: "http://localhost:5000", // iOS simulator
+  baseURL: "http://10.0.2.2:5000",
   timeout: 15000,
 });
 
