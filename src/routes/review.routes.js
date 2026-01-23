@@ -21,5 +21,5 @@ router.get(
 );
 
 router.get("/rooms/:id", reviewController.roomReviews);
-
+router.get("/", reviewController.allReviews);
 module.exports = router;

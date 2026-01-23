@@ -31,8 +31,17 @@ async function roomReviews(req, res) {
   }
 }
 
+async function allReviews(req, res) {
+  try {
+    const result = await reviewService.AllReviews();
+    return ok(res, result, "OK", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
 module.exports = {
   create,
   myReviews,
   roomReviews,
+  allReviews,
 };

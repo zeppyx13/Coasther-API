@@ -61,10 +61,16 @@ async function findReviewsByRoom(room_id) {
   );
   return rows;
 }
-
+async function findAllReviews() {
+  const [rows] = await db.query(
+    `SELECT users.name, rooms.number, reviews.rating, reviews.comment, reviews.created_at FROM reviews INNER JOIN users ON reviews.user_id = users.id Inner JOIN rooms ON reviews.room_id = rooms.id`,
+  );
+  return rows;
+}
 module.exports = {
   createReview,
   findByUserAndLease,
   findMyReviews,
   findReviewsByRoom,
+  findAllReviews,
 };

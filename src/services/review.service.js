@@ -8,10 +8,7 @@ function httpError(message, statusCode = 400) {
 }
 
 async function getLeaseForReview(userId) {
-  // prioritas: lease aktif
   let lease = await tenantModel.findActiveLeaseByUserId(userId);
-
-  // kalau tidak ada aktif, boleh review lease terakhir (pernah tinggal)
   if (!lease) {
     throw httpError("No active lease found for review", 404);
   }
@@ -52,8 +49,14 @@ async function listRoomReviews(roomId) {
   return { reviews: rows };
 }
 
+async function AllReviews() {
+  const rows = await reviewModel.findAllReviews();
+  return { reviews: rows };
+}
+
 module.exports = {
   createMyReview,
   listMyReviews,
   listRoomReviews,
+  AllReviews,
 };
