@@ -32,4 +32,20 @@ async function createUser({
   return result.insertId;
 }
 
-module.exports = { findByEmail, findById, createUser };
+async function updateById(id, data) {
+  const allowed = ["name", "phone"];
+  const fields = [];
+  const params = [];
+
+  for (const key of allowed) {
+    if (data[key] === undefined) continue;
+    fields.push(`${key} = ?`);
+    params.push(data[key]);
+  }
+
+  if (!fields.length) return;
+
+  params.push(id);
+  await db.query(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`, params);
+}
+module.exports = { findByEmail, findById, createUser, updateById };
