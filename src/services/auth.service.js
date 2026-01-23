@@ -74,15 +74,12 @@ async function me(userId) {
 
 async function forgotPassword({ email }) {
   const user = await userModel.findByEmail(email);
-
-  // selalu return OK (anti enumeration)
   const safeResponse = {
     message: "If the email exists, reset instructions will be sent.",
   };
 
   if (!user) return safeResponse;
 
-  // generate token
   const token = crypto.randomBytes(32).toString("hex");
   const tokenHash = sha256(token);
   const expires = new Date(Date.now() + 30 * 60 * 1000);
