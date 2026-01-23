@@ -13,6 +13,7 @@ const announcementRoutes = require("./routes/announcement.routes");
 const reviewRoutes = require("./routes/review.routes");
 const complaintRoutes = require("./routes/complaint.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
+const weatherRoutes = require("./routes/weather.routes");
 // app init
 const app = express();
 
@@ -48,6 +49,7 @@ app.use("/api/announcements", announcementRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/weather", weatherRoutes);
 // 404 handler
 app.use(notFound);
 app.use(errorHandler);
