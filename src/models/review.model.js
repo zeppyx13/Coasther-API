@@ -67,10 +67,46 @@ async function findAllReviews() {
   );
   return rows;
 }
+async function getRoomsRatingSummary() {
+  const [rows] = await db.query(
+    `
+    SELECT
+      rm.id AS room_id,
+      rm.number AS number,
+      ROUND(AVG(r.rating), 1) AS avg_rating,
+      COUNT(r.id) AS total_reviews
+    FROM rooms rm
+    LEFT JOIN reviews r ON r.room_id = rm.id
+    GROUP BY rm.id, rm.number
+    ORDER BY rm.number ASC
+    `,
+  );
+  return rows;
+}
+async function getRoomRatingSummary(room_id) {
+  const [rows] = await db.query(
+    `
+    SELECT
+      rm.id AS room_id,
+      rm.number AS number,
+      ROUND(AVG(r.rating), 1) AS avg_rating,
+      COUNT(r.id) AS total_reviews
+    FROM rooms rm
+    LEFT JOIN reviews r ON r.room_id = rm.id
+    WHERE rm.id = ?
+    GROUP BY rm.id, rm.number
+    LIMIT 1
+    `,
+    [room_id],
+  );
+  return rows[0] || null;
+}
 module.exports = {
   createReview,
   findByUserAndLease,
   findMyReviews,
   findReviewsByRoom,
   findAllReviews,
+  getRoomsRatingSummary,
+  getRoomRatingSummary,
 };

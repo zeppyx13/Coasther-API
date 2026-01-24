@@ -39,9 +39,28 @@ async function allReviews(req, res) {
     return fail(res, err.message, err.statusCode || 400);
   }
 }
+async function roomsSummary(req, res) {
+  try {
+    const result = await reviewService.roomsRatingSummary();
+    return ok(res, result, "OK", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
+async function roomSummary(req, res) {
+  try {
+    const roomId = Number(req.params.id);
+    const result = await reviewService.roomRatingSummary(roomId);
+    return ok(res, result, "OK", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
 module.exports = {
   create,
   myReviews,
   roomReviews,
   allReviews,
+  roomsSummary,
+  roomSummary,
 };

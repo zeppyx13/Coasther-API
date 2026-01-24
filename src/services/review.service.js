@@ -53,10 +53,21 @@ async function AllReviews() {
   const rows = await reviewModel.findAllReviews();
   return { reviews: rows };
 }
+async function roomsRatingSummary() {
+  const rows = await reviewModel.getRoomsRatingSummary();
+  return { rooms: rows };
+}
 
+async function roomRatingSummary(roomId) {
+  const row = await reviewModel.getRoomRatingSummary(roomId);
+  if (!row) throw httpError("Room not found", 404);
+  return { summary: row };
+}
 module.exports = {
   createMyReview,
   listMyReviews,
   listRoomReviews,
   AllReviews,
+  roomsRatingSummary,
+  roomRatingSummary,
 };

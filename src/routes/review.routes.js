@@ -22,4 +22,6 @@ router.get(
 
 router.get("/rooms/:id", reviewController.roomReviews);
 router.get("/", reviewController.allReviews);
+router.get("/summary", reviewController.roomsSummary);
+router.get("/rooms/:id/summary", reviewController.roomSummary);
 module.exports = router;
