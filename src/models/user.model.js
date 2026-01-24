@@ -48,38 +48,6 @@ async function updateById(id, data) {
   params.push(id);
   await db.query(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`, params);
 }
-async function setResetTokenByEmail(
-  email,
-  reset_token_hash,
-  reset_token_expires_at,
-) {
-  await db.query(
-    `UPDATE users
-     SET reset_token_hash = ?, reset_token_expires_at = ?
-     WHERE email = ?`,
-    [reset_token_hash, reset_token_expires_at, email],
-  );
-}
-
-async function findByResetTokenHash(reset_token_hash) {
-  const [rows] = await db.query(
-    `SELECT id, email, reset_token_expires_at
-     FROM users
-     WHERE reset_token_hash = ?
-     LIMIT 1`,
-    [reset_token_hash],
-  );
-  return rows[0] || null;
-}
-
-async function updatePasswordAndClearReset(id, password_hash) {
-  await db.query(
-    `UPDATE users
-     SET password_hash = ?, reset_token_hash = NULL, reset_token_expires_at = NULL
-     WHERE id = ?`,
-    [password_hash, id],
-  );
-}
 async function setResetOtpByEmail(email, reset_otp_hash, reset_otp_expires_at) {
   await db.query(
     `UPDATE users
@@ -132,6 +100,7 @@ module.exports = {
   findById,
   createUser,
   updateById,
+
   setResetOtpByEmail,
   getOtpMetaByEmail,
   increaseOtpAttempts,

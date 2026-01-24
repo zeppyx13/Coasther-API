@@ -33,6 +33,11 @@ const resetPasswordWithOtpSchema = z.object({
   otp: z.string().regex(/^\d{6}$/),
   password: z.string().min(6),
 });
+const sendDeleteOtpSchema = z.object({});
+
+const confirmDeleteSchema = z.object({
+  otp: z.string().regex(/^\d{6}$/),
+});
 module.exports = {
   registerSchema,
   loginSchema,
@@ -41,4 +46,6 @@ module.exports = {
   sendOtpSchema,
   verifyOtpSchema,
   resetPasswordWithOtpSchema,
+  sendDeleteOtpSchema,
+  confirmDeleteSchema,
 };
