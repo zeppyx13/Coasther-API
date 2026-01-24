@@ -48,6 +48,7 @@ async function updateById(id, data) {
   params.push(id);
   await db.query(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`, params);
 }
+
 async function setResetOtpByEmail(email, reset_otp_hash, reset_otp_expires_at) {
   await db.query(
     `UPDATE users
@@ -95,15 +96,70 @@ async function updatePassword(userId, password_hash) {
     userId,
   ]);
 }
+
+async function setDeleteOtpByUserId(userId, otpHash, expires) {
+  await db.query(
+    `UPDATE users
+     SET delete_otp_hash = ?, delete_otp_expires_at = ?, delete_otp_attempts = 0, delete_otp_sent_at = NOW()
+     WHERE id = ?`,
+    [otpHash, expires, userId],
+  );
+}
+
+async function getDeleteOtpMetaByUserId(userId) {
+  const [rows] = await db.query(
+    `SELECT id, name, email, delete_otp_hash, delete_otp_expires_at, delete_otp_attempts, delete_otp_sent_at
+     FROM users
+     WHERE id = ?
+     LIMIT 1`,
+    [userId],
+  );
+  return rows[0] || null;
+}
+
+async function increaseDeleteOtpAttempts(userId) {
+  await db.query(
+    `UPDATE users SET delete_otp_attempts = delete_otp_attempts + 1 WHERE id = ?`,
+    [userId],
+  );
+}
+
+async function clearDeleteOtp(userId) {
+  await db.query(
+    `UPDATE users
+     SET delete_otp_hash = NULL,
+         delete_otp_expires_at = NULL,
+         delete_otp_attempts = 0,
+         delete_otp_sent_at = NULL
+     WHERE id = ?`,
+    [userId],
+  );
+}
+
+async function hardDeleteUserById(userId) {
+  await db.query(
+    `DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE user_id = ?)`,
+    [userId],
+  );
+  await db.query(`DELETE FROM invoices WHERE user_id = ?`, [userId]);
+  await db.query(`DELETE FROM reviews WHERE user_id = ?`, [userId]);
+  await db.query(`DELETE FROM complaints WHERE user_id = ?`, [userId]);
+  await db.query(`DELETE FROM leases WHERE user_id = ?`, [userId]);
+  await db.query(`DELETE FROM users WHERE id = ?`, [userId]);
+}
 module.exports = {
   findByEmail,
   findById,
   createUser,
   updateById,
-
   setResetOtpByEmail,
   getOtpMetaByEmail,
   increaseOtpAttempts,
   clearResetOtp,
   updatePassword,
+  setDeleteOtpByUserId,
+  getDeleteOtpMetaByUserId,
+  increaseDeleteOtpAttempts,
+  clearDeleteOtp,
+  hardDeleteUserById,
 };

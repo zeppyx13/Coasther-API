@@ -3,11 +3,11 @@ const authService = require("../services/auth.service");
 const {
   registerSchema,
   loginSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
   sendOtpSchema,
   verifyOtpSchema,
   resetPasswordWithOtpSchema,
+  sendDeleteOtpSchema,
+  confirmDeleteSchema,
 } = require("../validators/auth.validator");
 
 async function register(req, res) {
@@ -68,6 +68,29 @@ async function resetPasswordWithOtp(req, res) {
     return fail(res, err.message, err.statusCode || 400);
   }
 }
+
+async function sendDeleteOtp(req, res) {
+  try {
+    sendDeleteOtpSchema.parse(req.body || {});
+    const result = await authService.sendDeleteOtp(req.user.id);
+    return ok(res, result, "OK", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
+
+async function confirmDelete(req, res) {
+  try {
+    const payload = confirmDeleteSchema.parse(req.body);
+    const result = await authService.confirmDeleteAccount(
+      req.user.id,
+      payload.otp,
+    );
+    return ok(res, result, "OK", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
 module.exports = {
   register,
   login,
@@ -75,4 +98,6 @@ module.exports = {
   sendResetOtp,
   verifyResetOtp,
   resetPasswordWithOtp,
+  sendDeleteOtp,
+  confirmDelete,
 };

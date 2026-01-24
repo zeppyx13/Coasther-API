@@ -159,6 +159,86 @@ async function resetPasswordWithOtp({ email, otp, password }) {
   return { message: "Password reset success" };
 }
 
+async function sendDeleteOtp(userId) {
+  const user = await userModel.getDeleteOtpMetaByUserId(userId);
+  if (!user) {
+    const err = new Error("User not found");
+    err.statusCode = 404;
+    throw err;
+  }
+  if (user.delete_otp_sent_at) {
+    const last = new Date(user.delete_otp_sent_at).getTime();
+    if (Date.now() - last < 60 * 1000) {
+      return { message: "OTP already sent. Please wait a moment." };
+    }
+  }
+  const otp = generateOtp6();
+  const otpHash = sha256(otp);
+  const expires = new Date(Date.now() + 10 * 60 * 1000);
+
+  await userModel.setDeleteOtpByUserId(userId, otpHash, expires);
+
+  await sendMail({
+    to: user.email,
+    subject: "OTP Hapus Akun Coasther",
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6">
+        <h2>Konfirmasi Hapus Akun</h2>
+        <p>Halo <b>${user.name}</b>,</p>
+        <p>Anda meminta untuk menghapus akun Coasther.</p>
+        <p>Gunakan OTP berikut untuk konfirmasi:</p>
+        <p style="font-size: 28px; letter-spacing: 4px; font-weight: bold;">${otp}</p>
+        <p>OTP berlaku selama <b>10 menit</b>.</p>
+        <p>Jika Anda tidak merasa melakukan permintaan ini, abaikan email ini.</p>
+        <br/>
+        <p>— Coasther Team</p>
+      </div>
+    `,
+  });
+
+  return { message: "OTP sent to your email" };
+}
+
+async function confirmDeleteAccount(userId, otp) {
+  const user = await userModel.getDeleteOtpMetaByUserId(userId);
+  if (!user) {
+    const err = new Error("User not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (!user.delete_otp_hash || !user.delete_otp_expires_at) {
+    const err = new Error("OTP not requested");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (new Date(user.delete_otp_expires_at).getTime() < Date.now()) {
+    const err = new Error("OTP expired");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (Number(user.delete_otp_attempts || 0) >= 5) {
+    const err = new Error("Too many attempts. Request a new OTP.");
+    err.statusCode = 429;
+    throw err;
+  }
+
+  const otpHash = sha256(otp);
+  if (otpHash !== user.delete_otp_hash) {
+    await userModel.increaseDeleteOtpAttempts(userId);
+    const err = new Error("Invalid OTP");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  await userModel.clearDeleteOtp(userId);
+  await userModel.hardDeleteUserById(userId);
+
+  return { message: "Account deleted" };
+}
+
 module.exports = {
   register,
   login,
@@ -166,4 +246,6 @@ module.exports = {
   sendResetOtp,
   verifyResetOtp,
   resetPasswordWithOtp,
+  sendDeleteOtp,
+  confirmDeleteAccount,
 };
