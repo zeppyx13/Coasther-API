@@ -39,26 +39,6 @@ async function me(req, res) {
   }
 }
 
-async function forgotPassword(req, res) {
-  try {
-    const payload = forgotPasswordSchema.parse(req.body);
-    const result = await authService.forgotPassword(payload);
-    return ok(res, result, "OK", 200);
-  } catch (err) {
-    return fail(res, err.message, err.statusCode || 400);
-  }
-}
-
-async function resetPassword(req, res) {
-  try {
-    const payload = resetPasswordSchema.parse(req.body);
-    const result = await authService.resetPassword(payload);
-    return ok(res, result, "OK", 200);
-  } catch (err) {
-    return fail(res, err.message, err.statusCode || 400);
-  }
-}
-
 async function sendResetOtp(req, res) {
   try {
     const payload = sendOtpSchema.parse(req.body);
@@ -92,8 +72,6 @@ module.exports = {
   register,
   login,
   me,
-  forgotPassword,
-  resetPassword,
   sendResetOtp,
   verifyResetOtp,
   resetPasswordWithOtp,

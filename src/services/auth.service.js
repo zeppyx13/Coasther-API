@@ -72,87 +72,18 @@ async function me(userId) {
   return user;
 }
 
-async function forgotPassword({ email }) {
-  const user = await userModel.findByEmail(email);
-  const safeResponse = {
-    message: "If the email exists, reset instructions will be sent.",
-  };
-
-  if (!user) return safeResponse;
-
-  const token = crypto.randomBytes(32).toString("hex");
-  const tokenHash = sha256(token);
-  const expires = new Date(Date.now() + 30 * 60 * 1000);
-
-  await userModel.setResetTokenByEmail(email, tokenHash, expires);
-
-  await sendMail({
-    to: user.email,
-    subject: "Reset Password Coasther",
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6">
-        <h2>Reset Password</h2>
-        <p>Halo <b>${user.name}</b>,</p>
-        <p>Kami menerima permintaan reset password akun Coasther Anda.</p>
-        <p>OTP anda adalah:</p>
-        <p>
-          <b
-             style="display:inline-block;padding:10px 16px;
-                    background:#7A1E2D;color:#fff;
-                    text-decoration:none;border-radius:6px">
-            ${token}
-          </b>
-        </p>
-        <p>Link ini berlaku selama <b>30 menit</b>.</p>
-        <p>Jika Anda tidak merasa melakukan permintaan ini, abaikan email ini.</p>
-        <br/>
-        <p>— Coasther Team</p>
-      </div>
-    `,
-  });
-
-  return safeResponse;
-}
-
-async function resetPassword({ token, password }) {
-  const tokenHash = sha256(token);
-  const user = await userModel.findByResetTokenHash(tokenHash);
-  if (!user) {
-    const err = new Error("Invalid or expired token");
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const exp = user.reset_token_expires_at
-    ? new Date(user.reset_token_expires_at)
-    : null;
-  if (!exp || exp.getTime() < Date.now()) {
-    const err = new Error("Invalid or expired token");
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const password_hash = await bcrypt.hash(password, 10);
-  await userModel.updatePasswordAndClearReset(user.id, password_hash);
-
-  return { message: "Password reset success" };
-}
 async function sendResetOtp({ email }) {
   const user = await userModel.getOtpMetaByEmail(email);
-
-  // anti email enumeration: response selalu sama
   const safeResponse = { message: "If the email exists, OTP has been sent." };
   if (!user) return safeResponse;
-
-  // anti spam resend: minimal tunggu 60 detik
   if (user.reset_otp_sent_at) {
     const last = new Date(user.reset_otp_sent_at).getTime();
-    if (Date.now() - last < 60 * 1000) return safeResponse;
+    if (Date.now() - last < 10 * 1000) return safeResponse;
   }
 
   const otp = generateOtp6();
   const otpHash = sha256(otp);
-  const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 menit
+  const expires = new Date(Date.now() + 2 * 60 * 1000); // 2 menit
 
   await userModel.setResetOtpByEmail(email, otpHash, expires);
 
@@ -165,7 +96,7 @@ async function sendResetOtp({ email }) {
         <p>Halo <b>${user.name}</b>,</p>
         <p>Gunakan OTP berikut untuk reset password:</p>
         <p style="font-size: 28px; letter-spacing: 4px; font-weight: bold;">${otp}</p>
-        <p>OTP berlaku selama <b>10 menit</b>. Jangan bagikan kode ini kepada siapa pun.</p>
+        <p>OTP berlaku selama <b>2 menit</b>. Jangan bagikan kode ini kepada siapa pun.</p>
         <p>Jika Anda tidak meminta reset password, abaikan email ini.</p>
         <br/>
         <p>— Coasther Team</p>
@@ -232,8 +163,6 @@ module.exports = {
   register,
   login,
   me,
-  forgotPassword,
-  resetPassword,
   sendResetOtp,
   verifyResetOtp,
   resetPasswordWithOtp,
