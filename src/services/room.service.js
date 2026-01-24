@@ -13,6 +13,13 @@ async function listRooms(query) {
     meta: { total: result.total, page: result.page, limit: result.limit },
   };
 }
+async function listRoomsWithFacilitiesAndReviewAgg(query) {
+  const result = await roomModel.findRoomsWithFacilitiesAndReviewAgg(query);
+  return {
+    rooms: result.rooms,
+    meta: result.meta,
+  };
+}
 
 async function getRoomDetail(id) {
   const room = await roomModel.findById(id);
@@ -45,4 +52,9 @@ async function updateRoom(id, payload) {
   return getRoomDetail(id);
 }
 
-module.exports = { listRooms, getRoomDetail, createRoom, updateRoom };
+module.exports = {
+  listRoomsWithFacilitiesAndReviewAgg,
+  getRoomDetail,
+  createRoom,
+  updateRoom,
+};

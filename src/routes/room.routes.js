@@ -6,6 +6,7 @@ const auth = require("../middlewares/auth.middleware");
 const { requireRole } = require("../middlewares/role.middleware");
 
 router.get("/", roomController.getRooms);
+router.get("/all", roomController.getlistRoomsWithFacilitiesAndReviewAgg);
 router.get("/:id", roomController.getRoomById);
 
 router.post(

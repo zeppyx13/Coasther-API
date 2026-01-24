@@ -8,7 +8,7 @@ function requireRole(allowedRoles = []) {
       }
 
       if (!Array.isArray(allowedRoles) || allowedRoles.length === 0) {
-        return next(); // tidak ada pembatasan role
+        return next();
       }
 
       if (!allowedRoles.includes(req.user.role)) {

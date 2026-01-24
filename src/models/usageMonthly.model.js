@@ -59,7 +59,6 @@ async function findLastReadingInRange(meter_id, start, end) {
   return rows[0] || null;
 }
 
-// upsert usage_monthly
 async function upsertUsageMonthly({
   room_id,
   month,

@@ -33,7 +33,6 @@ async function createRoom(req, res) {
     const result = await roomService.createRoom(payload);
     return ok(res, result, "Room created", 201);
   } catch (err) {
-    // duplicate number (MySQL)
     if (String(err.message || "").includes("Duplicate")) {
       return fail(res, "Room number already exists", 409);
     }
@@ -54,5 +53,19 @@ async function updateRoom(req, res) {
     return fail(res, err.message, err.statusCode || 400);
   }
 }
-
-module.exports = { getRooms, getRoomById, createRoom, updateRoom };
+async function getlistRoomsWithFacilitiesAndReviewAgg(req, res) {
+  try {
+    const query = listRoomsQuerySchema.parse(req.query);
+    const result = await roomService.listRoomsWithFacilitiesAndReviewAgg(query);
+    return ok(res, result, "OK", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
+module.exports = {
+  getRooms,
+  getRoomById,
+  createRoom,
+  updateRoom,
+  getlistRoomsWithFacilitiesAndReviewAgg,
+};

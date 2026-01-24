@@ -158,6 +158,101 @@ async function replaceRoomFacilities(room_id, facility_ids) {
     [values],
   );
 }
+async function findRoomsWithFacilitiesAndReviewAgg(params = {}) {
+  const page = Number(params.page || 1);
+  const limit = Number(params.limit || 20);
+  const offset = (page - 1) * limit;
+
+  const search = String(params.search || "").trim();
+  const is_available =
+    params.is_available === undefined ||
+    params.is_available === null ||
+    params.is_available === ""
+      ? null
+      : Number(params.is_available);
+  const where = [];
+  const values = [];
+
+  if (search) {
+    where.push("(rm.number LIKE ? OR rm.description LIKE ?)");
+    values.push(`%${search}%`, `%${search}%`);
+  }
+
+  if (is_available !== null && !Number.isNaN(is_available)) {
+    where.push("rm.is_available = ?");
+    values.push(is_available);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const [countRows] = await db.query(
+    `SELECT COUNT(*) AS total FROM rooms rm ${whereSql}`,
+    values,
+  );
+  const total = Number(countRows?.[0]?.total || 0);
+  const [roomRows] = await db.query(
+    `
+    SELECT rm.*
+    FROM rooms rm
+    ${whereSql}
+    ORDER BY rm.id ASC
+    LIMIT ? OFFSET ?
+    `,
+    [...values, limit, offset],
+  );
+  if (!roomRows.length) {
+    return { rooms: [], meta: { total, page, limit } };
+  }
+  const roomIds = roomRows.map((r) => r.id);
+  const inPlaceholders = roomIds.map(() => "?").join(",");
+  const [facRows] = await db.query(
+    `
+    SELECT
+      rf.room_id,
+      f.*
+    FROM room_facilities rf
+    JOIN facilities f ON f.id = rf.facility_id
+    WHERE rf.room_id IN (${inPlaceholders})
+    ORDER BY rf.room_id ASC, f.id ASC
+    `,
+    roomIds,
+  );
+  const [aggRows] = await db.query(
+    `
+    SELECT
+      room_id,
+      ROUND(AVG(rating), 1) AS review_avg,
+      COUNT(*) AS review_count
+    FROM reviews
+    WHERE room_id IN (${inPlaceholders})
+    GROUP BY room_id
+    `,
+    roomIds,
+  );
+  const facilitiesByRoom = new Map();
+  for (const row of facRows) {
+    const rid = row.room_id;
+    const { room_id, ...facility } = row;
+
+    if (!facilitiesByRoom.has(rid)) facilitiesByRoom.set(rid, []);
+    facilitiesByRoom.get(rid).push(facility);
+  }
+  const aggByRoom = new Map();
+  for (const a of aggRows) {
+    aggByRoom.set(a.room_id, {
+      review_avg: Number(a.review_avg || 0),
+      review_count: Number(a.review_count || 0),
+    });
+  }
+  const rooms = roomRows.map((rm) => {
+    const agg = aggByRoom.get(rm.id) || { review_avg: 0, review_count: 0 };
+    return {
+      ...rm,
+      facilities: facilitiesByRoom.get(rm.id) || [],
+      ...agg,
+    };
+  });
+
+  return { rooms, meta: { total, page, limit } };
+}
 
 module.exports = {
   findAll,
@@ -166,4 +261,5 @@ module.exports = {
   createRoom,
   updateRoomById,
   replaceRoomFacilities,
+  findRoomsWithFacilitiesAndReviewAgg,
 };

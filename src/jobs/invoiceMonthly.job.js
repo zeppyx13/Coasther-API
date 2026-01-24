@@ -32,7 +32,7 @@ function toDateOnlyUTC(d) {
 
 function calcDueDateUTC(month) {
   const { y, m } = assertYYYYMM(month);
-  const due = new Date(Date.UTC(y, m, 5, 0, 0, 0)); //tahun, bulan selanjutnya, tanggal 5, jam 00:00:00
+  const due = new Date(Date.UTC(y, m, 5, 0, 0, 0));
   return toDateOnlyUTC(due);
 }
 

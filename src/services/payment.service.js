@@ -157,7 +157,6 @@ async function handleMidtransWebhook(notification) {
   if (!payment) {
     return { handled: false, message: "Payment not found (ignored)" };
   }
-  //   store in webhook event log
   await paymentModel.insertPaymentEvent({
     payment_id: payment.id,
     event_type: "midtrans_notification",

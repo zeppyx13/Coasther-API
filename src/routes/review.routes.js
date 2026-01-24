@@ -5,7 +5,6 @@ const auth = require("../middlewares/auth.middleware");
 const { requireRole } = require("../middlewares/role.middleware");
 const reviewController = require("../controllers/review.controller");
 
-// tenant
 router.post(
   "/",
   auth,

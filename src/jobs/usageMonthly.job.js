@@ -28,14 +28,11 @@ function toNumber3(x) {
 }
 
 async function computeStartEndForMeter(meter_id, startAt, endAt) {
-  // start reading
   let start = await usageModel.findLastReadingBefore(meter_id, startAt);
   if (!start) {
     start = await usageModel.findFirstReadingInRange(meter_id, startAt, endAt);
   }
   const startVal = toNumber3(start?.reading_value ?? 0);
-
-  // end reading
   let end = await usageModel.findLastReadingBefore(meter_id, endAt);
   if (!end) {
     end = await usageModel.findLastReadingInRange(meter_id, startAt, endAt);

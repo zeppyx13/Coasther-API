@@ -9,7 +9,7 @@ const myUsageQuerySchema = z.object({
 
 const myMeterReadingsQuerySchema = z.object({
   type: z.enum(["water", "electricity"]),
-  from: z.string().datetime().optional(), // ISO 8601, contoh: 2026-01-01T00:00:00Z
+  from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   limit: z.coerce.number().int().positive().optional().default(200),
 });

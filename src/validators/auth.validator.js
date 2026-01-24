@@ -25,7 +25,7 @@ const sendOtpSchema = z.object({
 
 const verifyOtpSchema = z.object({
   email: z.string().email(),
-  otp: z.string().regex(/^\d{6}$/), // 6 digit
+  otp: z.string().regex(/^\d{6}$/),
 });
 
 const resetPasswordWithOtpSchema = z.object({

@@ -1,6 +1,4 @@
 const db = require("../config/db");
-
-// helper: ambil payment terbaru untuk invoice (kalau ada)
 async function findLatestPaymentByInvoiceId(invoice_id) {
   const [rows] = await db.query(
     `

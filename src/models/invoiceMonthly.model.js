@@ -18,8 +18,6 @@ async function getTariffSettings() {
   return rows[0] || null;
 }
 
-// leases yang overlap dengan bulan yang diminta
-// kriteria overlap: start_date < endAt AND (end_date IS NULL OR end_date >= startAt)
 async function findLeasesOverlappingMonth(startAtDate, endAtDate) {
   const [rows] = await db.query(
     `
