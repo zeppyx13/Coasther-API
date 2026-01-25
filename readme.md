@@ -5,7 +5,10 @@ Base URL (local):
 ```
 http://localhost:5000
 ```
+## Demo Akun
 
+email : gn.nanda0@gmail.com
+pw    : Admin#1234
 Semua response menggunakan format JSON standar:
 
 ```json
