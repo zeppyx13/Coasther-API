@@ -3,7 +3,7 @@ dotenv.config();
 
 const app = require("./src/app");
 const db = require("./src/config/db");
-
+const mqttClient = require("./src/config/mqtt");
 const PORT = process.env.PORT;
 
 (async () => {
