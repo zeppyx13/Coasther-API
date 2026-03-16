@@ -1,6 +1,7 @@
 const mqtt = require("mqtt");
 const db = require("./db");
 const iotService = require("../services/iot.service");
+const app = require("../app");
 
 const client = mqtt.connect({
   host: process.env.MQTT_HOST,
@@ -37,7 +38,8 @@ client.on("message", async (topic, message) => {
 
     console.log("MQTT Topic:", topic);
     console.log("Payload:", payload);
-
+    const io = app.get("io");
+    // METER READING
     if (
       parts.length === 4 &&
       parts[0] === "coasther" &&
@@ -69,9 +71,21 @@ client.on("message", async (topic, message) => {
       });
 
       console.log("Meter reading stored:", result);
+
+      // broadcast realtime ke dashboard
+      if (io) {
+        io.emit("meter_update", {
+          device_uid: deviceUid,
+          reading_value: payload.reading_value,
+          recorded_at: payload.recorded_at,
+          room_id: meter.room_id,
+          type: meter.type,
+        });
+      }
+
       return;
     }
-
+    // LIVE TELEMETRY
     if (
       parts.length === 4 &&
       parts[0] === "coasther" &&
@@ -86,6 +100,13 @@ client.on("message", async (topic, message) => {
       });
 
       console.log("Live telemetry updated:", result);
+      if (io) {
+        io.emit("telemetry_update", {
+          room_id: roomTopicId,
+          ...payload,
+        });
+      }
+
       return;
     }
 

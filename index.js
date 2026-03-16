@@ -4,14 +4,31 @@ dotenv.config();
 const app = require("./src/app");
 const db = require("./src/config/db");
 const mqttClient = require("./src/config/mqtt");
+const http = require("http");
+const { Server } = require("socket.io");
 const PORT = process.env.PORT;
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+  },
+});
+
+app.set("io", io);
+io.on("connection", (socket) => {
+  console.log("WebSocket connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("WebSocket disconnected:", socket.id);
+  });
+});
 
 (async () => {
   try {
     await db.query("SELECT 1");
     console.log("MySQL connected");
 
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
   } catch (error) {
