@@ -15,4 +15,26 @@ async function meterReading(req, res) {
   }
 }
 
-module.exports = { meterReading };
+async function getAllLiveStatus(req, res) {
+  try {
+    const result = await iotService.getAllLiveStatus();
+    return ok(res, result, "Live status fetched");
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 500);
+  }
+}
+
+async function getLiveStatusByRoomId(req, res) {
+  try {
+    const result = await iotService.getLiveStatusByRoomId(req.params.roomId);
+    return ok(res, result, "Live status fetched");
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
+
+module.exports = {
+  meterReading,
+  getAllLiveStatus,
+  getLiveStatusByRoomId,
+};

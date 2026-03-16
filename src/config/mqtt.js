@@ -38,7 +38,6 @@ client.on("message", async (topic, message) => {
     console.log("MQTT Topic:", topic);
     console.log("Payload:", payload);
 
-    // meter reading for billing and historical data
     if (
       parts.length === 4 &&
       parts[0] === "coasther" &&
@@ -46,8 +45,6 @@ client.on("message", async (topic, message) => {
       parts[3] === "reading"
     ) {
       const deviceUid = parts[2];
-
-      console.log("Meter Device UID:", deviceUid);
 
       const [rows] = await db.query(
         `
@@ -66,16 +63,15 @@ client.on("message", async (topic, message) => {
 
       const meter = rows[0];
 
-      await iotService.ingestMeterReading({
+      const result = await iotService.ingestMeterReading({
         meter,
         payload,
       });
 
-      console.log("Meter reading stored:", meter.type, payload.reading_value);
+      console.log("Meter reading stored:", result);
       return;
     }
 
-    // live telemetry for dashboard
     if (
       parts.length === 4 &&
       parts[0] === "coasther" &&
@@ -84,14 +80,12 @@ client.on("message", async (topic, message) => {
     ) {
       const roomTopicId = parts[2];
 
-      console.log("Telemetry Room Topic:", roomTopicId);
-
-      await iotService.ingestLiveTelemetry({
+      const result = await iotService.ingestLiveTelemetry({
         roomTopicId,
         payload,
       });
 
-      console.log("Live telemetry updated for room:", payload.room_id);
+      console.log("Live telemetry updated:", result);
       return;
     }
 
