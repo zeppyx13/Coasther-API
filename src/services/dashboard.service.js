@@ -2,7 +2,7 @@ const tenantService = require("./tenant.service");
 const usageTenantService = require("./usageTenant.service");
 const invoiceService = require("./invoice.service");
 const announcementService = require("./announcement.service");
-
+const dashboardModel = require("../models/dashboard.model");
 async function getTenantDashboard(userId) {
   const [myRoomRes, myUsageRes, announcementsRes] = await Promise.all([
     tenantService.getMyRoom(userId),
@@ -27,5 +27,56 @@ async function getTenantDashboard(userId) {
     announcements: announcementsRes.announcements,
   };
 }
+function calculateGrowthPercentage(currentValue, previousValue) {
+  if (previousValue === 0) {
+    return currentValue > 0 ? 100 : 0;
+  }
 
-module.exports = { getTenantDashboard };
+  return Number(
+    (((currentValue - previousValue) / previousValue) * 100).toFixed(1),
+  );
+}
+
+function getElectricityStatus(value) {
+  if (value === 0) return "Belum ada penggunaan bulan ini";
+  if (value < 200) return "Rendah bulan ini";
+  if (value < 400) return "Stabil minggu ini";
+  return "Penggunaan cukup tinggi";
+}
+async function getDashboardStats() {
+  const [
+    totalRooms,
+    availableRooms,
+    totalTenants,
+    activeTenants,
+    currentWaterUsage,
+    lastWaterUsage,
+    currentElectricityUsage,
+  ] = await Promise.all([
+    dashboardModel.countTotalRooms(),
+    dashboardModel.countAvailableRooms(),
+    dashboardModel.countTotalTenants(),
+    dashboardModel.countActiveTenants(),
+    dashboardModel.getCurrentMonthWaterUsage(),
+    dashboardModel.getLastMonthWaterUsage(),
+    dashboardModel.getCurrentMonthElectricityUsage(),
+  ]);
+
+  const waterGrowth = calculateGrowthPercentage(
+    currentWaterUsage,
+    lastWaterUsage,
+  );
+
+  return {
+    totalRooms,
+    availableRooms,
+    totalTenants,
+    activeTenants,
+    waterUsage: Number(currentWaterUsage.toFixed(1)),
+    waterGrowth,
+    electricityUsage: Number(currentElectricityUsage.toFixed(1)),
+    electricityStatus: getElectricityStatus(currentElectricityUsage),
+  };
+}
+
+module.exports = { getTenantDashboard, getDashboardStats };
