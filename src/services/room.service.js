@@ -57,4 +57,5 @@ module.exports = {
   getRoomDetail,
   createRoom,
   updateRoom,
+  listRooms,
 };
