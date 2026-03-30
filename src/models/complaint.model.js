@@ -96,9 +96,62 @@ async function updateComplaintForUser({ id, user_id, data }) {
   );
 }
 
+async function findAll({ status, page = 1, limit = 10 }) {
+  const p = Math.max(1, Number(page));
+  const l = Math.min(100, Math.max(1, Number(limit)));
+  const offset = (p - 1) * l;
+
+  const where = [];
+  const params = [];
+
+  if (status) {
+    where.push("c.status = ?");
+    params.push(status);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+  const [rows] = await db.query(
+    `
+    SELECT
+      c.id,
+      c.room_id,
+      c.title,
+      c.status,
+      c.created_at,
+      c.closed_at,
+      r.number AS room_number,
+      r.floor  AS room_floor
+    FROM complaints c
+    JOIN rooms r ON r.id = c.room_id
+    ${whereSql}
+    ORDER BY c.created_at DESC, c.id DESC
+    LIMIT ? OFFSET ?
+    `,
+    [...params, l, offset],
+  );
+
+  const [countRows] = await db.query(
+    `
+    SELECT COUNT(*) AS total
+    FROM complaints c
+    ${whereSql}
+    `,
+    params,
+  );
+
+  return {
+    rows,
+    total: countRows[0]?.total || 0,
+    page: p,
+    limit: l,
+  };
+}
+
 module.exports = {
   createComplaint,
   findByIdForUser,
   findAllForUser,
   updateComplaintForUser,
+  findAll,
 };

@@ -55,4 +55,16 @@ async function update(req, res) {
   }
 }
 
-module.exports = { create, list, detail, update };
+async function listAll(req, res) {
+  try {
+    const query = listComplaintsQuerySchema.parse(req.query);
+
+    const result = await complaintService.listAllComplaints(query);
+
+    return ok(res, result, "OK", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
+
+module.exports = { create, list, detail, update, listAll };

@@ -12,5 +12,5 @@ router.get("/", complaintController.list);
 router.get("/:id", complaintController.detail);
 router.post("/", complaintController.create);
 router.patch("/:id", complaintController.update);
-
+router.get("/admin/complaints", complaintController.listAll);
 module.exports = router;

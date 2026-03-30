@@ -76,9 +76,27 @@ async function updateMyComplaint(userId, id, payload) {
   return { complaint: updated };
 }
 
+async function listAllComplaints(query) {
+  const result = await complaintModel.findAll({
+    status: query.status,
+    page: query.page,
+    limit: query.limit,
+  });
+
+  return {
+    complaints: result.rows,
+    meta: {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+    },
+  };
+}
+
 module.exports = {
   createMyComplaint,
   listMyComplaints,
   getMyComplaintDetail,
   updateMyComplaint,
+  listAllComplaints,
 };
