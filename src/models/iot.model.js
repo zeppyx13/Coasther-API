@@ -86,7 +86,7 @@ async function findAllLiveStatus() {
     `
     SELECT
       rls.room_id,
-      r.room_number,
+      r.number,
       rls.flow_rate_lpm,
       rls.water_total_liter,
       rls.voltage,
@@ -111,7 +111,7 @@ async function findLiveStatusByRoomId(room_id) {
     `
     SELECT
       rls.room_id,
-      r.room_number,
+      r.number,
       rls.flow_rate_lpm,
       rls.water_total_liter,
       rls.voltage,
