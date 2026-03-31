@@ -6,4 +6,13 @@ async function updateMe(userId, payload) {
   return { user };
 }
 
-module.exports = { updateMe };
+async function getAllUsers() {
+  const users = await userModel.getAllUsers();
+  return { users };
+}
+async function getAdminUsers() {
+  const users = await userModel.getAdminUsers();
+  return { users };
+}
+
+module.exports = { updateMe, getAllUsers, getAdminUsers };

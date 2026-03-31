@@ -147,6 +147,19 @@ async function hardDeleteUserById(userId) {
   await db.query(`DELETE FROM leases WHERE user_id = ?`, [userId]);
   await db.query(`DELETE FROM users WHERE id = ?`, [userId]);
 }
+
+async function getAllUsers() {
+  const [rows] = await db.query(
+    `SELECT id, name, email, role, phone, created_at FROM users WHERE role = 'tenant' AND role != 'manager' ORDER BY created_at DESC`,
+  );
+  return rows;
+}
+async function getAdminUsers() {
+  const [rows] = await db.query(
+    `SELECT id, name, email, role, phone, created_at FROM users WHERE role = 'admin' or role = 'manager' ORDER BY created_at DESC`,
+  );
+  return rows;
+}
 module.exports = {
   findByEmail,
   findById,
@@ -162,4 +175,6 @@ module.exports = {
   increaseDeleteOtpAttempts,
   clearDeleteOtp,
   hardDeleteUserById,
+  getAllUsers,
+  getAdminUsers,
 };
