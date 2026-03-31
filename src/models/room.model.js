@@ -112,7 +112,12 @@ LEFT JOIN (
   GROUP BY room_id
 ) i 
   ON i.room_id = r.id
-ORDER BY r.floor ASC, r.number ASC LIMIT 5;`,
+ORDER BY 
+  CASE WHEN t.id IS NOT NULL THEN 0 ELSE 1 END,
+  COALESCE(i.total_amount, 0) DESC,
+  r.floor ASC,
+  r.number ASC
+LIMIT 5;`,
   );
   return rows;
 }
