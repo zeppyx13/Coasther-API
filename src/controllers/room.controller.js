@@ -53,6 +53,7 @@ async function updateRoom(req, res) {
     return fail(res, err.message, err.statusCode || 400);
   }
 }
+
 async function getlistRoomsWithFacilitiesAndReviewAgg(req, res) {
   try {
     const query = listRoomsQuerySchema.parse(req.query);
@@ -62,10 +63,21 @@ async function getlistRoomsWithFacilitiesAndReviewAgg(req, res) {
     return fail(res, err.message, err.statusCode || 400);
   }
 }
+
+async function getDashboardData(req, res) {
+  try {
+    const result = await roomService.getDashboardData();
+    return ok(res, result, "OK", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
+
 module.exports = {
   getRooms,
   getRoomById,
   createRoom,
   updateRoom,
+  getDashboardData,
   getlistRoomsWithFacilitiesAndReviewAgg,
 };

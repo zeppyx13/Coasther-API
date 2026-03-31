@@ -21,5 +21,10 @@ router.patch(
   requireRole(["admin", "manager"]),
   roomController.updateRoom,
 );
-
+router.get(
+  "/dashboard/data",
+  auth,
+  requireRole(["admin", "manager"]),
+  roomController.getDashboardData,
+);
 module.exports = router;

@@ -85,6 +85,38 @@ async function findFacilitiesByRoomId(room_id) {
   return rows;
 }
 
+async function roomstats() {
+  const [rows] = await db.query(
+    `SELECT
+  r.id AS room_id,
+  r.number AS room_number,
+  r.floor AS room_floor,
+  u.name AS tenant_name,
+  CASE
+    WHEN t.id IS NOT NULL THEN 'Terisi'
+    ELSE 'Kosong'
+  END AS status,
+  COALESCE(i.total_amount, 0) AS bill_amount
+FROM rooms r
+LEFT JOIN leases t 
+  ON t.room_id = r.id 
+  AND t.status = 'active'
+LEFT JOIN users u 
+  ON u.id = t.user_id
+LEFT JOIN (
+  SELECT 
+    room_id,
+    SUM(total_amount) AS total_amount
+  FROM invoices
+  WHERE status = 'unpaid'
+  GROUP BY room_id
+) i 
+  ON i.room_id = r.id
+ORDER BY r.floor ASC, r.number ASC LIMIT 5;`,
+  );
+  return rows;
+}
+
 async function createRoom({
   number,
   floor = null,
@@ -158,6 +190,7 @@ async function replaceRoomFacilities(room_id, facility_ids) {
     [values],
   );
 }
+
 async function findRoomsWithFacilitiesAndReviewAgg(params = {}) {
   const page = Number(params.page || 1);
   const limit = Number(params.limit || 20);
@@ -262,4 +295,5 @@ module.exports = {
   updateRoomById,
   replaceRoomFacilities,
   findRoomsWithFacilitiesAndReviewAgg,
+  roomstats,
 };

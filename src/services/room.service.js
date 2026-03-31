@@ -52,10 +52,16 @@ async function updateRoom(id, payload) {
   return getRoomDetail(id);
 }
 
+async function getDashboardData() {
+  const data = await roomModel.roomstats();
+  return { data };
+}
+
 module.exports = {
   listRoomsWithFacilitiesAndReviewAgg,
   getRoomDetail,
   createRoom,
   updateRoom,
   listRooms,
+  getDashboardData,
 };
