@@ -78,7 +78,31 @@ async function getLastMonthElectricityUsage() {
 
   return Number(rows[0]?.electricityUsage || 0);
 }
+async function getMonthlyUsageChart(months = 8) {
+  const [rows] = await db.query(
+    `
+    SELECT
+      month,
+      COALESCE(SUM(water_used), 0)  AS water_used,
+      COALESCE(SUM(elec_used),  0)  AS elec_used
+    FROM usage_monthly
+    WHERE month >= DATE_FORMAT(
+      DATE_SUB(CURRENT_DATE(), INTERVAL ? MONTH),
+      '%Y-%m'
+    )
+    GROUP BY month
+    ORDER BY month ASC
+    LIMIT ?
+    `,
+    [months - 1, months],
+  );
 
+  return rows.map((r) => ({
+    month: r.month,
+    water_used: Number(r.water_used),
+    elec_used: Number(r.elec_used),
+  }));
+}
 module.exports = {
   countTotalRooms,
   countAvailableRooms,
@@ -88,4 +112,5 @@ module.exports = {
   getLastMonthWaterUsage,
   getCurrentMonthElectricityUsage,
   getLastMonthElectricityUsage,
+  getMonthlyUsageChart,
 };

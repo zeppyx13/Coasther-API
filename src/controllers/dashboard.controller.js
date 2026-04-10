@@ -22,5 +22,13 @@ async function getDashboardStats(req, res, next) {
     next(error);
   }
 }
-
-module.exports = { tenantDashboard, getDashboardStats };
+async function getDashboardChart(req, res, next) {
+  try {
+    const months = Math.min(Number(req.query.months) || 8, 12);
+    const data = await dashboardService.getDashboardChart(months);
+    res.json({ success: true, message: "OK", data });
+  } catch (err) {
+    next(err);
+  }
+}
+module.exports = { tenantDashboard, getDashboardStats, getDashboardChart };

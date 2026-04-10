@@ -78,5 +78,8 @@ async function getDashboardStats() {
     electricityStatus: getElectricityStatus(currentElectricityUsage),
   };
 }
-
-module.exports = { getTenantDashboard, getDashboardStats };
+async function getDashboardChart(months = 8) {
+  const rows = await dashboardModel.getMonthlyUsageChart(months);
+  return { chart: rows };
+}
+module.exports = { getTenantDashboard, getDashboardStats, getDashboardChart };

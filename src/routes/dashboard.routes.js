@@ -12,4 +12,5 @@ router.get(
   dashboardController.tenantDashboard,
 );
 router.get("/stats", dashboardController.getDashboardStats);
+router.get("/chart", dashboardController.getDashboardChart);
 module.exports = router;
