@@ -99,7 +99,7 @@ async function getMonthlyUsageChart(months = 8) {
 
   return rows.map((r) => ({
     month: r.month,
-    water_used: Number(r.water_used),
+    water_used: Number((r.water_used / 1000).toFixed(3)),
     elec_used: Number(r.elec_used),
   }));
 }
