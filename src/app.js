@@ -15,7 +15,7 @@ const complaintRoutes = require("./routes/complaint.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const weatherRoutes = require("./routes/weather.routes");
 const userRoutes = require("./routes/user.routes");
-const aiInsightRoutes = require("./routes/aiInsight.routes");
+const ai = require("./routes/ai.routes");
 const unsplashRoutes = require("./routes/unsplash.routes");
 // app init
 const app = express();
@@ -54,7 +54,7 @@ app.use("/api/complaints", complaintRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/ai-insights", aiInsightRoutes);
+app.use("/api/ai", ai);
 app.use("/api/unsplash", unsplashRoutes);
 // 404 handler
 app.use(notFound);

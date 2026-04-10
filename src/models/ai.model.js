@@ -59,7 +59,47 @@ async function getLatestMetersByRoom(roomId) {
   return rows;
 }
 
+async function getUsageHistory(roomId, months = 6) {
+  const [rows] = await db.query(
+    `SELECT month, water_used, elec_used
+     FROM usage_monthly
+     WHERE room_id = ?
+     ORDER BY month DESC
+     LIMIT ?`,
+    [roomId, months],
+  );
+  return rows.reverse(); // ascending
+}
+
+async function getCurrentMonthUsage(roomId) {
+  const [rows] = await db.query(
+    `SELECT
+       m.type,
+       MIN(mr.reading_value) AS start_val,
+       MAX(mr.reading_value) AS end_val,
+       MAX(mr.reading_value) - MIN(mr.reading_value) AS used_so_far
+     FROM meters m
+     JOIN meter_readings mr ON mr.meter_id = m.id
+     WHERE m.room_id = ?
+       AND mr.recorded_at >= DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')
+     GROUP BY m.type`,
+    [roomId],
+  );
+  return rows;
+}
+
+async function getRoomPrice(roomId) {
+  const [rows] = await db.query(
+    `SELECT price_monthly FROM rooms WHERE id = ? LIMIT 1`,
+    [roomId],
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
   getDailyUsageByRoom,
   getLatestMetersByRoom,
+  getUsageHistory,
+  getCurrentMonthUsage,
+  getRoomPrice,
 };
