@@ -1,10 +1,7 @@
+// src/services/ai.service.js
 const { GoogleGenAI } = require("@google/genai");
-const ai = require("../models/ai.model");
+const aiModel = require("../models/ai.model");
 const feeModel = require("../models/fee.model");
-const WATER_RATE = feeModel.getfreequota().waterRate;
-const ELEC_RATE = feeModel.getfreequota().electricRate;
-const WATER_FREE_QUOTA = feeModel.getfreequota().waterQuota;
-const ELEC_FREE_QUOTA = feeModel.getfreequota().electricQuota;
 
 // =====================================================
 // UTILITIES
@@ -18,6 +15,11 @@ function httpError(message, statusCode = 400) {
 function toNumber(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function toNumber3(x) {
+  const n = Number(x || 0);
+  return Math.round(n * 1000) / 1000;
 }
 
 function getDaysInfo() {
@@ -37,13 +39,18 @@ function buildUsageMap(rows) {
   const byType = { electric: [], water: [] };
 
   for (const row of rows) {
+    const rawValue = toNumber(row.usage_value);
+    const rawFirst = toNumber(row.first_reading);
+    const rawLast = toNumber(row.last_reading);
+    const isWater = row.type === "water";
+
     const item = {
       date: row.usage_date,
-      usage_value: toNumber(row.usage_value),
-      unit: row.unit,
+      usage_value: isWater ? Number((rawValue / 1000).toFixed(3)) : rawValue,
+      unit: isWater ? "m3" : row.unit,
       sample_count: toNumber(row.sample_count),
-      first_reading: toNumber(row.first_reading),
-      last_reading: toNumber(row.last_reading),
+      first_reading: isWater ? Number((rawFirst / 1000).toFixed(3)) : rawFirst,
+      last_reading: isWater ? Number((rawLast / 1000).toFixed(3)) : rawLast,
     };
 
     if (row.type === "electric") byType.electric.push(item);
@@ -142,31 +149,49 @@ function buildPredictionPrompt({
   currentUsage,
   daysInfo,
   roomPrice,
+  tariff,
 }) {
+  // Konversi histori water dari liter → m³ untuk konsistensi dengan tariff
+  const historyConverted = history.map((h) => ({
+    month: h.month,
+    water_used_m3: toNumber3(Number(h.water_used) / 1000),
+    elec_used_kwh: toNumber3(Number(h.elec_used)),
+  }));
+
+  // Konversi current month usage water liter → m³
+  const currentConverted = currentUsage.map((c) => ({
+    type: c.type,
+    used_so_far:
+      c.type === "water"
+        ? toNumber3(Number(c.used_so_far) / 1000)
+        : toNumber3(Number(c.used_so_far)),
+    unit: c.type === "water" ? "m3" : "kWh",
+  }));
+
   return `
 Kamu adalah sistem prediksi konsumsi utilitas untuk aplikasi manajemen kost Coasther.
 
 Tugas:
 1. Analisis histori pemakaian air dan listrik 6 bulan terakhir.
 2. Hitung rata-rata harian berdasarkan pemakaian bulan berjalan sampai hari ini.
-3. Prediksi total pemakaian air (liter) dan listrik (kWh) hingga akhir bulan.
+3. Prediksi total pemakaian air (m³) dan listrik (kWh) hingga akhir bulan.
 4. Hitung estimasi tagihan berdasarkan tarif berikut:
-   - Sewa bulanan: Rp ${roomPrice?.price_monthly ?? 0}
-   - Air: gratis ${WATER_FREE_QUOTA} m³ pertama, kelebihan Rp ${WATER_RATE}/m³
-   - Listrik: gratis ${ELEC_FREE_QUOTA} kWh pertama, kelebihan Rp ${ELEC_RATE}/kWh
+   - Sewa bulanan  : Rp ${roomPrice?.price_monthly ?? 0}
+   - Air           : gratis ${tariff.waterQuota} m³ pertama, kelebihan Rp ${tariff.waterRate}/m³
+   - Listrik       : gratis ${tariff.electricQuota} kWh pertama, kelebihan Rp ${tariff.electricRate}/kWh
 5. Berikan confidence level prediksi (low/medium/high) berdasarkan konsistensi data histori.
 6. Jangan membuat angka baru selain dari kalkulasi data yang tersedia.
 
 Data:
-- room_id: ${roomId}
-- Hari ini: ${daysInfo.today} dari ${daysInfo.totalDays} hari
-- Sisa hari bulan ini: ${daysInfo.remaining} hari
+- room_id        : ${roomId}
+- Hari ini       : ${daysInfo.today} dari ${daysInfo.totalDays} hari
+- Sisa hari      : ${daysInfo.remaining} hari
 
-Histori 6 bulan (water_used = liter, elec_used = kWh):
-${JSON.stringify(history, null, 2)}
+Histori 6 bulan (water_used_m3 = m³, elec_used_kwh = kWh):
+${JSON.stringify(historyConverted, null, 2)}
 
 Pemakaian bulan berjalan (sampai hari ini):
-${JSON.stringify(currentUsage, null, 2)}
+${JSON.stringify(currentConverted, null, 2)}
 
 Keluarkan JSON sesuai schema yang diberikan.
 `;
@@ -180,9 +205,9 @@ function getAiClient() {
 }
 
 async function callGemini(prompt, schema) {
-  const ai = getAiClient();
+  const client = getAiClient();
 
-  const response = await ai.models.generateContent({
+  const response = await client.models.generateContent({
     model: process.env.GEMINI_MODEL,
     contents: prompt,
     config: {
@@ -199,7 +224,7 @@ async function callGemini(prompt, schema) {
 }
 
 // =====================================================
-// INSIGHT SCHEMA
+// SCHEMAS
 // =====================================================
 const insightSchema = {
   type: "object",
@@ -238,19 +263,15 @@ const insightSchema = {
   ],
 };
 
-// =====================================================
-// PREDICTION SCHEMA
-// =====================================================
 const predictionSchema = {
   type: "object",
   properties: {
     water: {
       type: "object",
       properties: {
-        used_so_far_liter: { type: "number" },
-        predicted_total_liter: { type: "number" },
+        used_so_far_m3: { type: "number" },
         predicted_total_m3: { type: "number" },
-        daily_avg_liter: { type: "number" },
+        daily_avg_m3: { type: "number" },
       },
     },
     electricity: {
@@ -285,8 +306,10 @@ async function generateRoomInsight({ roomId, days = 30 }) {
     throw httpError("Invalid room id", 400);
   }
 
-  const dailyRows = await ai.getDailyUsageByRoom(roomId, days);
-  const latestMeters = await ai.getLatestMetersByRoom(roomId);
+  const [dailyRows, latestMeters] = await Promise.all([
+    aiModel.getDailyUsageByRoom(roomId, days),
+    aiModel.getLatestMetersByRoom(roomId),
+  ]);
 
   if (!latestMeters.length) {
     throw httpError("No active meters found for this room", 404);
@@ -323,10 +346,12 @@ async function generateRoomPrediction({ roomId }) {
     throw httpError("Invalid room id", 400);
   }
 
-  const [history, currentUsage, roomPrice] = await Promise.all([
-    ai.getUsageHistory(roomId, 6),
-    ai.getCurrentMonthUsage(roomId),
-    ai.getRoomPrice(roomId),
+  // Ambil tariff secara async (bukan sync di top-level)
+  const [history, currentUsage, roomPrice, tariff] = await Promise.all([
+    aiModel.getUsageHistory(roomId, 6),
+    aiModel.getCurrentMonthUsage(roomId),
+    aiModel.getRoomPrice(roomId),
+    feeModel.getfreequota(),
   ]);
 
   if (!roomPrice) {
@@ -340,6 +365,7 @@ async function generateRoomPrediction({ roomId }) {
     currentUsage,
     daysInfo,
     roomPrice,
+    tariff,
   });
   const prediction = await callGemini(prompt, predictionSchema);
 

@@ -78,6 +78,7 @@ async function getLastMonthElectricityUsage() {
 
   return Number(rows[0]?.electricityUsage || 0);
 }
+
 async function getMonthlyUsageChart(months = 8) {
   const [rows] = await db.query(
     `
