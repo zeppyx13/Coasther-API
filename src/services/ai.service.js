@@ -1,8 +1,9 @@
-// src/services/ai.service.js
 const { GoogleGenAI } = require("@google/genai");
 const aiModel = require("../models/ai.model");
 const feeModel = require("../models/fee.model");
-
+const aiCacheModel = require("../models/aicache.model");
+const INSIGHT_TTL_HOURS = Number(process.env.INSIGHT_TTL_HOURS);
+const PREDICTION_TTL_HOURS = Number(process.env.PREDICTION_TTL_HOURS);
 // =====================================================
 // UTILITIES
 // =====================================================
@@ -301,10 +302,24 @@ const predictionSchema = {
 // =====================================================
 // MAIN FUNCTIONS
 // =====================================================
-async function generateRoomInsight({ roomId, days = 30 }) {
+async function generateRoomInsight({
+  roomId,
+  days = 30,
+  forceRefresh = false,
+}) {
   if (!roomId || Number.isNaN(Number(roomId))) {
     throw httpError("Invalid room id", 400);
   }
+
+  if (!forceRefresh) {
+    const cached = await aiCacheModel.getCache(roomId, "insight");
+    if (cached) {
+      console.log(`[AI] Insight cache hit — room ${roomId}`);
+      return cached;
+    }
+  }
+
+  console.log(`[AI] Generating insight — room ${roomId}`);
 
   const [dailyRows, latestMeters] = await Promise.all([
     aiModel.getDailyUsageByRoom(roomId, days),
@@ -329,24 +344,34 @@ async function generateRoomInsight({ roomId, days = 30 }) {
   });
   const insight = await callGemini(prompt, insightSchema);
 
-  return {
+  const result = {
     room_id: Number(roomId),
     period_days: Number(days),
     latest_meters: latestMeters,
-    stats: {
-      electric: electricStats,
-      water: waterStats,
-    },
+    stats: { electric: electricStats, water: waterStats },
     insight,
   };
+
+  await aiCacheModel.setCache(roomId, "insight", result, INSIGHT_TTL_HOURS);
+
+  return result;
 }
 
-async function generateRoomPrediction({ roomId }) {
+async function generateRoomPrediction({ roomId, forceRefresh = false }) {
   if (!roomId || Number.isNaN(Number(roomId))) {
     throw httpError("Invalid room id", 400);
   }
 
-  // Ambil tariff secara async (bukan sync di top-level)
+  if (!forceRefresh) {
+    const cached = await aiCacheModel.getCache(roomId, "prediction");
+    if (cached) {
+      console.log(`[AI] Prediction cache hit — room ${roomId}`);
+      return cached;
+    }
+  }
+
+  console.log(`[AI] Generating prediction — room ${roomId}`);
+
   const [history, currentUsage, roomPrice, tariff] = await Promise.all([
     aiModel.getUsageHistory(roomId, 6),
     aiModel.getCurrentMonthUsage(roomId),
@@ -354,9 +379,7 @@ async function generateRoomPrediction({ roomId }) {
     feeModel.getfreequota(),
   ]);
 
-  if (!roomPrice) {
-    throw httpError("Room not found", 404);
-  }
+  if (!roomPrice) throw httpError("Room not found", 404);
 
   const daysInfo = getDaysInfo();
   const prompt = buildPredictionPrompt({
@@ -369,11 +392,20 @@ async function generateRoomPrediction({ roomId }) {
   });
   const prediction = await callGemini(prompt, predictionSchema);
 
-  return {
+  const result = {
     room_id: Number(roomId),
     days_info: daysInfo,
     prediction,
   };
+
+  await aiCacheModel.setCache(
+    roomId,
+    "prediction",
+    result,
+    PREDICTION_TTL_HOURS,
+  );
+
+  return result;
 }
 
 module.exports = {
