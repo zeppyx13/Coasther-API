@@ -72,7 +72,15 @@ async function getDashboardData(req, res) {
     return fail(res, err.message, err.statusCode || 400);
   }
 }
-
+async function deleteRoom(req, res) {
+  try {
+    const { id } = roomIdParamSchema.parse(req.params);
+    const result = await roomService.deleteRoom(id);
+    return ok(res, result, "Room deleted", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
 module.exports = {
   getRooms,
   getRoomById,
@@ -80,4 +88,5 @@ module.exports = {
   updateRoom,
   getDashboardData,
   getlistRoomsWithFacilitiesAndReviewAgg,
+  deleteRoom,
 };

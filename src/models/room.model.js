@@ -291,7 +291,17 @@ async function findRoomsWithFacilitiesAndReviewAgg(params = {}) {
 
   return { rooms, meta: { total, page, limit } };
 }
+async function deleteById(id) {
+  await db.query(`DELETE FROM rooms WHERE id = ?`, [id]);
+}
 
+async function hasActiveLease(id) {
+  const [rows] = await db.query(
+    `SELECT id FROM leases WHERE room_id = ? AND status = 'active' LIMIT 1`,
+    [id],
+  );
+  return rows.length > 0;
+}
 module.exports = {
   findAll,
   findById,
@@ -301,4 +311,6 @@ module.exports = {
   replaceRoomFacilities,
   findRoomsWithFacilitiesAndReviewAgg,
   roomstats,
+  deleteById,
+  hasActiveLease,
 };

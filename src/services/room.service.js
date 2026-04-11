@@ -56,7 +56,16 @@ async function getDashboardData() {
   const data = await roomModel.roomstats();
   return { data };
 }
+async function deleteRoom(id) {
+  const existing = await roomModel.findById(id);
+  if (!existing) throw httpError("Room not found", 404);
 
+  const hasLease = await roomModel.hasActiveLease(id);
+  if (hasLease) throw httpError("Cannot delete room with active lease", 409);
+
+  await roomModel.deleteById(id);
+  return { deleted: true };
+}
 module.exports = {
   listRoomsWithFacilitiesAndReviewAgg,
   getRoomDetail,
@@ -64,4 +73,5 @@ module.exports = {
   updateRoom,
   listRooms,
   getDashboardData,
+  deleteRoom,
 };

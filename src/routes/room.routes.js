@@ -27,4 +27,10 @@ router.get(
   requireRole(["admin", "manager"]),
   roomController.getDashboardData,
 );
+router.delete(
+  "/:id",
+  auth,
+  requireRole(["admin", "manager"]),
+  roomController.deleteRoom,
+);
 module.exports = router;
