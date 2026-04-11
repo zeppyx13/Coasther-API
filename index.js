@@ -3,21 +3,21 @@ dotenv.config();
 
 const app = require("./src/app");
 const db = require("./src/config/db");
-const mqttClient = require("./src/config/mqtt");
+const { client: mqttClient, setIo } = require("./src/config/mqtt");
 const http = require("http");
 const { Server } = require("socket.io");
+
 const PORT = process.env.PORT;
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-  },
+  cors: { origin: "*" },
 });
 
 app.set("io", io);
+setIo(io);
+
 io.on("connection", (socket) => {
   console.log("WebSocket connected:", socket.id);
-
   socket.on("disconnect", () => {
     console.log("WebSocket disconnected:", socket.id);
   });

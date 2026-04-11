@@ -1,5 +1,5 @@
 const iotModel = require("../models/iot.model");
-
+const { client: mqttClient } = require("../config/mqtt");
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
   err.statusCode = statusCode;
@@ -125,9 +125,46 @@ async function getLiveStatusByRoomId(roomId) {
   return await iotModel.findLiveStatusByRoomId(numericRoomId);
 }
 
+async function sendRelayCommand({ roomId, command }) {
+  const device = await iotModel.findActiveDeviceByRoomId(roomId);
+
+  if (!device) {
+    const err = new Error("Room or meter not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const roomTopicId = device.device_uid
+    .replace("esp32_", "")
+    .replace("_water", "")
+    .replace("_electric", "");
+
+  const topic = `coasther/device/${roomTopicId}/control`;
+
+  return new Promise((resolve, reject) => {
+    mqttClient.publish(topic, command, { qos: 1 }, (err) => {
+      if (err) {
+        const e = new Error("Failed to publish MQTT command");
+        e.statusCode = 502;
+        return reject(e);
+      }
+
+      console.log(`[RELAY] Published to ${topic}: ${command}`);
+      resolve({
+        room_id: roomId,
+        room_topic_id: roomTopicId,
+        topic,
+        command,
+        sent_at: new Date().toISOString(),
+      });
+    });
+  });
+}
+
 module.exports = {
   ingestMeterReading,
   ingestLiveTelemetry,
   getAllLiveStatus,
   getLiveStatusByRoomId,
+  sendRelayCommand,
 };

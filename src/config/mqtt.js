@@ -1,7 +1,11 @@
 const mqtt = require("mqtt");
 const db = require("./db");
-const iotService = require("../services/iot.service");
-const app = require("../app");
+
+let _io = null;
+
+function setIo(io) {
+  _io = io;
+}
 
 const client = mqtt.connect({
   host: process.env.MQTT_HOST,
@@ -15,19 +19,13 @@ client.on("connect", () => {
   console.log("MQTT Connected");
 
   client.subscribe("coasther/meter/+/reading", (err) => {
-    if (err) {
-      console.error("Subscribe meter error:", err);
-    } else {
-      console.log("Subscribed to meter readings");
-    }
+    if (err) console.error("Subscribe meter error:", err);
+    else console.log("Subscribed to meter readings");
   });
 
   client.subscribe("coasther/telemetry/+/live", (err) => {
-    if (err) {
-      console.error("Subscribe telemetry error:", err);
-    } else {
-      console.log("Subscribed to live telemetry");
-    }
+    if (err) console.error("Subscribe telemetry error:", err);
+    else console.log("Subscribed to live telemetry");
   });
 });
 
@@ -35,11 +33,11 @@ client.on("message", async (topic, message) => {
   try {
     const payload = JSON.parse(message.toString());
     const parts = topic.split("/");
+    const iotService = require("../services/iot.service");
 
     console.log("MQTT Topic:", topic);
     console.log("Payload:", payload);
-    const io = app.get("io");
-    // METER READING
+
     if (
       parts.length === 4 &&
       parts[0] === "coasther" &&
@@ -49,12 +47,10 @@ client.on("message", async (topic, message) => {
       const deviceUid = parts[2];
 
       const [rows] = await db.query(
-        `
-        SELECT id, room_id, type, unit, device_uid
-        FROM meters
-        WHERE device_uid = ?
-        LIMIT 1
-        `,
+        `SELECT id, room_id, type, unit, device_uid
+         FROM meters
+         WHERE device_uid = ?
+         LIMIT 1`,
         [deviceUid],
       );
 
@@ -64,17 +60,11 @@ client.on("message", async (topic, message) => {
       }
 
       const meter = rows[0];
-
-      const result = await iotService.ingestMeterReading({
-        meter,
-        payload,
-      });
-
+      const result = await iotService.ingestMeterReading({ meter, payload });
       console.log("Meter reading stored:", result);
 
-      // broadcast realtime ke dashboard
-      if (io) {
-        io.emit("meter_update", {
+      if (_io) {
+        _io.emit("meter_update", {
           device_uid: deviceUid,
           reading_value: payload.reading_value,
           recorded_at: payload.recorded_at,
@@ -85,7 +75,7 @@ client.on("message", async (topic, message) => {
 
       return;
     }
-    // LIVE TELEMETRY
+
     if (
       parts.length === 4 &&
       parts[0] === "coasther" &&
@@ -93,15 +83,14 @@ client.on("message", async (topic, message) => {
       parts[3] === "live"
     ) {
       const roomTopicId = parts[2];
-
       const result = await iotService.ingestLiveTelemetry({
         roomTopicId,
         payload,
       });
-
       console.log("Live telemetry updated:", result);
-      if (io) {
-        io.emit("telemetry_update", {
+
+      if (_io) {
+        _io.emit("telemetry_update", {
           room_id: roomTopicId,
           ...payload,
         });
@@ -118,12 +107,7 @@ client.on("message", async (topic, message) => {
   }
 });
 
-client.on("error", (err) => {
-  console.error("MQTT Error:", err.message);
-});
+client.on("error", (err) => console.error("MQTT Error:", err.message));
+client.on("reconnect", () => console.log("MQTT reconnecting..."));
 
-client.on("reconnect", () => {
-  console.log("MQTT reconnecting...");
-});
-
-module.exports = client;
+module.exports = { client, setIo };

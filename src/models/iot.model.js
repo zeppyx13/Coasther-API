@@ -132,11 +132,22 @@ async function findLiveStatusByRoomId(room_id) {
 
   return rows[0] || null;
 }
-
+async function findActiveDeviceByRoomId(roomId) {
+  const [rows] = await db.query(
+    `SELECT r.id, m.device_uid
+     FROM rooms r
+     JOIN meters m ON m.room_id = r.id
+     WHERE r.id = ? AND m.is_active = 1
+     LIMIT 1`,
+    [roomId],
+  );
+  return rows[0] || null;
+}
 module.exports = {
   findLastReading,
   insertReading,
   upsertLiveStatus,
   findAllLiveStatus,
   findLiveStatusByRoomId,
+  findActiveDeviceByRoomId,
 };

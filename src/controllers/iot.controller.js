@@ -33,8 +33,34 @@ async function getLiveStatusByRoomId(req, res) {
   }
 }
 
+async function relayControl(req, res) {
+  try {
+    const roomId = Number(req.params.roomId);
+    const { command } = req.body;
+
+    if (!roomId || Number.isNaN(roomId)) {
+      return fail(res, "Invalid room id", 400);
+    }
+
+    const validCommands = ["relay_on", "relay_off", "reset_nvs"];
+    if (!validCommands.includes(command)) {
+      return fail(
+        res,
+        `Invalid command. Valid: ${validCommands.join(", ")}`,
+        400,
+      );
+    }
+
+    const result = await iotService.sendRelayCommand({ roomId, command });
+    return ok(res, result, "Relay command sent", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 500);
+  }
+}
+
 module.exports = {
   meterReading,
   getAllLiveStatus,
   getLiveStatusByRoomId,
+  relayControl,
 };
