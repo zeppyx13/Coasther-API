@@ -21,6 +21,7 @@ const tariffRoutes = require("./routes/tariff.routes");
 const leaseRoutes = require("./routes/lease.routes");
 const invoiceAdminRoutes = require("./routes/invoice.admin.routes");
 const facilityRoutes = require("./routes/facility.routes");
+const meterRoutes = require("./routes/meter.routes");
 // app init
 const app = express();
 
@@ -64,6 +65,7 @@ app.use("/api/tariff", tariffRoutes);
 app.use("/api/leases", leaseRoutes);
 app.use("/api/invoices", invoiceAdminRoutes);
 app.use("/api/facilities", facilityRoutes);
+app.use("/api/meters", meterRoutes);
 // 404 handler
 app.use(notFound);
 app.use(errorHandler);
