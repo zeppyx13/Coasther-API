@@ -41,7 +41,20 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
+const {
+  generalLimiter,
+  authLimiter,
+  aiLimiter,
+  schedulerLimiter,
+  relayLimiter,
+} = require("./middlewares/rateLimit.middleware");
 
+// LIMITER
+app.use(generalLimiter);
+// Specific limiters per route
+app.use("/api/auth", authLimiter);
+app.use("/api/ai", aiLimiter);
+app.use("/api/scheduler", schedulerLimiter);
 // routes
 app.get("/", (req, res) => {
   res.status(200).json({
@@ -49,7 +62,6 @@ app.get("/", (req, res) => {
     message: "Welcome to Coasther API",
   });
 });
-
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/tenants", tenantRoutes);
