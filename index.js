@@ -4,6 +4,7 @@ dotenv.config();
 const app = require("./src/app");
 const db = require("./src/config/db");
 const { client: mqttClient, setIo } = require("./src/config/mqtt");
+const { startScheduler } = require("./src/jobs/scheduler");
 const http = require("http");
 const { Server } = require("socket.io");
 
@@ -27,6 +28,8 @@ io.on("connection", (socket) => {
   try {
     await db.query("SELECT 1");
     console.log("MySQL connected");
+
+    startScheduler();
 
     server.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
