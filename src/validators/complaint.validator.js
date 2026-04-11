@@ -31,10 +31,14 @@ const listComplaintsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().optional().default(10),
 });
+const adminUpdateComplaintSchema = z.object({
+  status: z.enum(["open", "in_progress", "closed"]),
+});
 
 module.exports = {
   createComplaintSchema,
   updateComplaintSchema,
   complaintIdParamSchema,
   listComplaintsQuerySchema,
+  adminUpdateComplaintSchema,
 };

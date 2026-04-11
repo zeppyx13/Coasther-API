@@ -92,11 +92,25 @@ async function listAllComplaints(query) {
     },
   };
 }
+async function getComplaintDetailAdmin(id) {
+  const complaint = await complaintModel.findByIdAdmin(id);
+  if (!complaint) throw httpError("Complaint not found", 404);
+  return { complaint };
+}
 
+async function updateComplaintAdmin(id, payload) {
+  const existing = await complaintModel.findByIdAdmin(id);
+  if (!existing) throw httpError("Complaint not found", 404);
+
+  await complaintModel.updateComplaintAdmin(id, payload);
+  return getComplaintDetailAdmin(id);
+}
 module.exports = {
   createMyComplaint,
   listMyComplaints,
   getMyComplaintDetail,
   updateMyComplaint,
   listAllComplaints,
+  getComplaintDetailAdmin,
+  updateComplaintAdmin,
 };

@@ -147,11 +147,55 @@ async function findAll({ status, page = 1, limit = 10 }) {
     limit: l,
   };
 }
+async function findByIdAdmin(id) {
+  const [rows] = await db.query(
+    `SELECT
+       c.*,
+       r.number AS room_number,
+       r.floor  AS room_floor,
+       u.name   AS tenant_name,
+       u.email  AS tenant_email
+     FROM complaints c
+     JOIN rooms r ON r.id = c.room_id
+     JOIN users u ON u.id = c.user_id
+     WHERE c.id = ?
+     LIMIT 1`,
+    [id],
+  );
+  return rows[0] || null;
+}
 
+async function updateComplaintAdmin(id, data) {
+  const fields = [];
+  const params = [];
+
+  if (data.status !== undefined) {
+    fields.push("status = ?");
+    params.push(data.status);
+
+    if (data.status === "closed") {
+      fields.push("closed_at = ?");
+      params.push(new Date());
+    } else {
+      fields.push("closed_at = ?");
+      params.push(null);
+    }
+  }
+
+  if (!fields.length) return;
+
+  params.push(id);
+  await db.query(
+    `UPDATE complaints SET ${fields.join(", ")} WHERE id = ?`,
+    params,
+  );
+}
 module.exports = {
   createComplaint,
   findByIdForUser,
   findAllForUser,
   updateComplaintForUser,
   findAll,
+  findByIdAdmin,
+  updateComplaintAdmin,
 };

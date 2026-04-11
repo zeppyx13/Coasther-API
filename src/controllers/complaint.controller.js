@@ -5,6 +5,7 @@ const {
   updateComplaintSchema,
   complaintIdParamSchema,
   listComplaintsQuerySchema,
+  adminUpdateComplaintSchema,
 } = require("../validators/complaint.validator");
 
 async function create(req, res) {
@@ -66,5 +67,32 @@ async function listAll(req, res) {
     return fail(res, err.message, err.statusCode || 400);
   }
 }
+async function adminDetail(req, res) {
+  try {
+    const { id } = complaintIdParamSchema.parse(req.params);
+    const result = await complaintService.getComplaintDetailAdmin(id);
+    return ok(res, result, "OK", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
 
-module.exports = { create, list, detail, update, listAll };
+async function adminUpdate(req, res) {
+  try {
+    const { id } = complaintIdParamSchema.parse(req.params);
+    const payload = adminUpdateComplaintSchema.parse(req.body);
+    const result = await complaintService.updateComplaintAdmin(id, payload);
+    return ok(res, result, "Complaint updated", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
+module.exports = {
+  create,
+  list,
+  detail,
+  update,
+  listAll,
+  adminDetail,
+  adminUpdate,
+};

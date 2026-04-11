@@ -1,4 +1,3 @@
-// src/validators/announcement.validator.js
 const { z } = require("zod");
 
 const listAnnouncementsQuerySchema = z.object({
