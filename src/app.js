@@ -17,6 +17,7 @@ const weatherRoutes = require("./routes/weather.routes");
 const userRoutes = require("./routes/user.routes");
 const ai = require("./routes/ai.routes");
 const unsplashRoutes = require("./routes/unsplash.routes");
+const tariffRoutes = require("./routes/tariff.routes");
 // app init
 const app = express();
 
@@ -56,6 +57,7 @@ app.use("/api/weather", weatherRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/ai", ai);
 app.use("/api/unsplash", unsplashRoutes);
+app.use("/api/tariff", tariffRoutes);
 // 404 handler
 app.use(notFound);
 app.use(errorHandler);
