@@ -19,6 +19,7 @@ const ai = require("./routes/ai.routes");
 const unsplashRoutes = require("./routes/unsplash.routes");
 const tariffRoutes = require("./routes/tariff.routes");
 const leaseRoutes = require("./routes/lease.routes");
+const invoiceAdminRoutes = require("./routes/invoice.admin.routes");
 // app init
 const app = express();
 
@@ -60,6 +61,7 @@ app.use("/api/ai", ai);
 app.use("/api/unsplash", unsplashRoutes);
 app.use("/api/tariff", tariffRoutes);
 app.use("/api/leases", leaseRoutes);
+app.use("/api/invoices", invoiceAdminRoutes);
 // 404 handler
 app.use(notFound);
 app.use(errorHandler);
