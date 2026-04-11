@@ -23,6 +23,7 @@ const invoiceAdminRoutes = require("./routes/invoice.admin.routes");
 const facilityRoutes = require("./routes/facility.routes");
 const meterRoutes = require("./routes/meter.routes");
 const paymentAdminRoutes = require("./routes/payment.admin.routes");
+const userAdminRoutes = require("./routes/user.admin.routes");
 // app init
 const app = express();
 
@@ -68,6 +69,7 @@ app.use("/api/invoices", invoiceAdminRoutes);
 app.use("/api/facilities", facilityRoutes);
 app.use("/api/meters", meterRoutes);
 app.use("/api/payments-admin", paymentAdminRoutes);
+app.use("/api/users-admin", userAdminRoutes);
 // 404 handler
 app.use(notFound);
 app.use(errorHandler);
