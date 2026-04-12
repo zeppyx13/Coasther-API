@@ -47,6 +47,14 @@ function toNumber3(x) {
   return Math.round(n * 1000) / 1000;
 }
 
+async function getUserEmail(user_id) {
+  const [rows] = await db.query(
+    `SELECT name, email FROM users WHERE id = ? LIMIT 1`,
+    [user_id],
+  );
+  return rows[0] || null;
+}
+
 async function generateInvoicesForMonth(month) {
   const tariff = await invoiceModel.getTariffSettings();
   if (!tariff) throw httpError("Tariff settings not found (id=1)", 500);
@@ -67,8 +75,7 @@ async function generateInvoicesForMonth(month) {
     const usage = await invoiceModel.findUsageMonthly(lease.room_id, month);
 
     const water_used_liter = toNumber3(usage?.water_used ?? 0);
-    const water_used = toNumber3(water_used_liter / 1000); // liter → m³
-
+    const water_used = toNumber3(water_used_liter / 1000);
     const elec_used = toNumber3(usage?.elec_used ?? 0);
 
     const water_billable = Math.max(
@@ -109,11 +116,7 @@ async function generateInvoicesForMonth(month) {
       status,
     });
     try {
-      const [userRows] = await db.query(
-        `SELECT name, email FROM users WHERE id = ? LIMIT 1`,
-        [lease.user_id],
-      );
-      const user = userRows[0];
+      const user = await getUserEmail(lease.user_id);
 
       if (user?.email) {
         const { subject, html } = invoiceCreatedTemplate({
@@ -123,14 +126,15 @@ async function generateInvoicesForMonth(month) {
           total_amount,
           room_number: lease.room_number,
         });
+
         await sendMail({ to: user.email, subject, html });
       }
     } catch (mailErr) {
       console.error(
-        `[invoice] Gagal kirim email user ${lease.user_id}:`,
-        mailErr.message,
+        `[invoice] Gagal kirim email user ${lease.user_id}: ${mailErr.message}`,
       );
     }
+
     processed += 1;
   }
 
