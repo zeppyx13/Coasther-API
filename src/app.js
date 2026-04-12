@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const morgan = require("morgan");
 
 // routes
 const authRoutes = require("./routes/auth.routes");
@@ -30,6 +29,7 @@ const app = express();
 // Middleware
 const notFound = require("./middlewares/notFound.middleware");
 const errorHandler = require("./middlewares/error.middleware");
+const requestLogger = require("./middlewares/requestLogger.middleware");
 app.use(helmet());
 app.use(
   cors({
@@ -40,7 +40,7 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan("dev"));
+app.use(requestLogger);
 const {
   generalLimiter,
   authLimiter,
