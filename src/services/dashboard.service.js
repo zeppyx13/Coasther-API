@@ -3,6 +3,7 @@ const usageTenantService = require("./usageTenant.service");
 const invoiceService = require("./invoice.service");
 const announcementService = require("./announcement.service");
 const dashboardModel = require("../models/dashboard.model");
+
 async function getTenantDashboard(userId) {
   const [myRoomRes, myUsageRes, announcementsRes] = await Promise.all([
     tenantService.getMyRoom(userId),
@@ -27,6 +28,7 @@ async function getTenantDashboard(userId) {
     announcements: announcementsRes.announcements,
   };
 }
+
 function calculateGrowthPercentage(currentValue, previousValue) {
   if (previousValue === 0) {
     return currentValue > 0 ? 100 : 0;
@@ -43,6 +45,7 @@ function getElectricityStatus(value) {
   if (value < 400) return "Stabil minggu ini";
   return "Penggunaan cukup tinggi";
 }
+
 async function getDashboardStats() {
   const [
     totalRooms,
@@ -78,8 +81,33 @@ async function getDashboardStats() {
     electricityStatus: getElectricityStatus(currentElectricityUsage),
   };
 }
+
 async function getDashboardChart(months = 8) {
   const rows = await dashboardModel.getMonthlyUsageChart(months);
   return { chart: rows };
 }
-module.exports = { getTenantDashboard, getDashboardStats, getDashboardChart };
+
+async function getDashboardSummary() {
+  const [income, occupancy, invoiceStatus, topRoom] = await Promise.all([
+    dashboardModel.getCurrentMonthTotalIncome(),
+    dashboardModel.countOccupiedRooms(),
+    dashboardModel.countInvoicesByStatus(),
+    dashboardModel.getRoomWithHighestUsage(),
+  ]);
+
+  return {
+    totalIncome: income,
+    occupiedRooms: occupancy.occupied,
+    totalRooms: occupancy.total,
+    paidInvoices: invoiceStatus.paid,
+    unpaidInvoices: invoiceStatus.unpaid,
+    highestUsageRoom: topRoom,
+  };
+}
+
+module.exports = {
+  getTenantDashboard,
+  getDashboardStats,
+  getDashboardChart,
+  getDashboardSummary,
+};

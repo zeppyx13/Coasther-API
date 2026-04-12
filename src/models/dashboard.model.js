@@ -104,6 +104,56 @@ async function getMonthlyUsageChart(months = 8) {
     elec_used: Number(r.elec_used),
   }));
 }
+
+async function getCurrentMonthTotalIncome() {
+  const [rows] = await db.query(`
+    SELECT COALESCE(SUM(total_amount), 0) AS totalIncome
+    FROM invoices
+    WHERE month = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')
+      AND status IN ('paid', 'overdue')
+  `);
+  return Number(rows[0]?.totalIncome || 0);
+}
+
+async function countOccupiedRooms() {
+  const [rows] = await db.query(`
+    SELECT 
+      COUNT(*) AS total,
+      SUM(CASE WHEN is_available = 0 THEN 1 ELSE 0 END) AS occupied
+    FROM rooms
+  `);
+  return {
+    occupied: Number(rows[0]?.occupied || 0),
+    total: Number(rows[0]?.total || 0),
+  };
+}
+
+async function countInvoicesByStatus() {
+  const [rows] = await db.query(`
+    SELECT
+      SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END)    AS paid,
+      SUM(CASE WHEN status IN ('unpaid','overdue') THEN 1 ELSE 0 END) AS unpaid
+    FROM invoices
+    WHERE month = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')
+  `);
+  return {
+    paid: Number(rows[0]?.paid || 0),
+    unpaid: Number(rows[0]?.unpaid || 0),
+  };
+}
+
+async function getRoomWithHighestUsage() {
+  const [rows] = await db.query(`
+    SELECT r.number AS room_number
+    FROM usage_monthly um
+    JOIN rooms r ON r.id = um.room_id
+    WHERE um.month = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')
+    ORDER BY (um.water_used + um.elec_used) DESC
+    LIMIT 1
+  `);
+  return rows[0]?.room_number || null;
+}
+
 module.exports = {
   countTotalRooms,
   countAvailableRooms,
@@ -114,4 +164,8 @@ module.exports = {
   getCurrentMonthElectricityUsage,
   getLastMonthElectricityUsage,
   getMonthlyUsageChart,
+  getCurrentMonthTotalIncome,
+  countOccupiedRooms,
+  countInvoicesByStatus,
+  getRoomWithHighestUsage,
 };

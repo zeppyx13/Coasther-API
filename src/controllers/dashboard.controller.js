@@ -9,6 +9,7 @@ async function tenantDashboard(req, res) {
     return fail(res, err.message, err.statusCode || 400);
   }
 }
+
 async function getDashboardStats(req, res, next) {
   try {
     const stats = await dashboardService.getDashboardStats();
@@ -22,6 +23,7 @@ async function getDashboardStats(req, res, next) {
     next(error);
   }
 }
+
 async function getDashboardChart(req, res, next) {
   try {
     const months = Math.min(Number(req.query.months) || 8, 12);
@@ -31,4 +33,23 @@ async function getDashboardChart(req, res, next) {
     next(err);
   }
 }
-module.exports = { tenantDashboard, getDashboardStats, getDashboardChart };
+
+async function getDashboardSummary(req, res, next) {
+  try {
+    const data = await dashboardService.getDashboardSummary();
+    return res.status(200).json({
+      success: true,
+      message: "Dashboard summary fetched successfully",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = {
+  tenantDashboard,
+  getDashboardStats,
+  getDashboardChart,
+  getDashboardSummary,
+};

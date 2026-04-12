@@ -13,4 +13,6 @@ router.get(
 );
 router.get("/stats", dashboardController.getDashboardStats);
 router.get("/chart", dashboardController.getDashboardChart);
+router.get("/summary", dashboardController.getDashboardSummary);
+
 module.exports = router;
