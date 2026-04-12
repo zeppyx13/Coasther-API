@@ -23,7 +23,6 @@ router.patch(
   complaintController.adminUpdate,
 );
 
-// Tenant routes — /:id di bawah
 router.get("/", complaintController.list);
 router.post("/", complaintController.create);
 router.get("/:id", complaintController.detail);

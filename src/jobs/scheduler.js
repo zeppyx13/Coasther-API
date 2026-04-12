@@ -1,8 +1,8 @@
 const cron = require("node-cron");
 const { runUsageMonthly } = require("./usageMonthly.job");
 const { generateInvoicesForMonth } = require("./invoiceMonthly.job");
-const logger = require("../config/logger"); // tambah ini
-
+const logger = require("../config/logger");
+const { runOverdueInvoice } = require("./overdueInvoice.job");
 let isRunning = false;
 let isCurrentRunning = false;
 
@@ -78,12 +78,23 @@ async function runCurrentMonthUsage() {
   }
 }
 
+async function runOverdueCheck() {
+  try {
+    logger.info("[scheduler] START overdue invoice check");
+    const result = await runOverdueInvoice();
+    logger.info(`[scheduler] DONE overdue check — updated: ${result.updated}`);
+  } catch (err) {
+    logger.error(`[scheduler] ERROR overdue check: ${err.message}`, err);
+  }
+}
+
 function startScheduler() {
   const cronMonthlyBilling = getCronExpression(
     "CRON_MONTHLY_BILLING",
     "10 0 1 * *",
   );
   const cronCurrentMonth = getCronExpression("CRON_CURRENT_MONTH", "0 1 * * *");
+  const cronOverdue = getCronExpression("CRON_OVERDUE_CHECK", "0 7 * * *");
 
   cron.schedule(cronMonthlyBilling, async () => {
     const prevMonth = getPrevMonthYYYYMM();
@@ -94,9 +105,14 @@ function startScheduler() {
     await runCurrentMonthUsage();
   });
 
+  cron.schedule(cronOverdue, async () => {
+    await runOverdueCheck();
+  });
+
   logger.info(`[scheduler] Cron scheduled:`);
   logger.info(`[scheduler]   - Monthly billing  : ${cronMonthlyBilling}`);
   logger.info(`[scheduler]   - Current month    : ${cronCurrentMonth}`);
+  logger.info(`[scheduler]   - Overdue check    : ${cronOverdue}`);
 }
 
 module.exports = { startScheduler, runMonthlyBilling, runCurrentMonthUsage };
