@@ -1,6 +1,7 @@
 const cron = require("node-cron");
 const { runUsageMonthly } = require("./usageMonthly.job");
 const { generateInvoicesForMonth } = require("./invoiceMonthly.job");
+const logger = require("../config/logger"); // tambah ini
 
 let isRunning = false;
 let isCurrentRunning = false;
@@ -26,7 +27,7 @@ function getCronExpression(envKey, fallback) {
   const val = process.env[envKey];
   if (val && cron.validate(val)) return val;
   if (val && !cron.validate(val)) {
-    console.warn(
+    logger.warn(
       `[scheduler] Invalid cron expression in ${envKey}: "${val}", using fallback: "${fallback}"`,
     );
   }
@@ -35,20 +36,20 @@ function getCronExpression(envKey, fallback) {
 
 async function runMonthlyBilling(month) {
   if (isRunning) {
-    console.log("[scheduler] Skip: billing job already running");
+    logger.info("[scheduler] Skip: billing job already running");
     return;
   }
 
   isRunning = true;
   try {
-    console.log(`[scheduler] START monthly billing month=${month}`);
+    logger.info(`[scheduler] START monthly billing month=${month}`);
     const usageRes = await runUsageMonthly(month);
-    console.log("[scheduler] USAGE done:", usageRes);
+    logger.info(`[scheduler] USAGE done: ${JSON.stringify(usageRes)}`);
     const invRes = await generateInvoicesForMonth(month);
-    console.log("[scheduler] INVOICES done:", invRes);
-    console.log(`[scheduler] DONE monthly billing month=${month}`);
+    logger.info(`[scheduler] INVOICES done: ${JSON.stringify(invRes)}`);
+    logger.info(`[scheduler] DONE monthly billing month=${month}`);
   } catch (err) {
-    console.error("[scheduler] ERROR:", err);
+    logger.error(`[scheduler] ERROR monthly billing: ${err.message}`, err);
   } finally {
     isRunning = false;
   }
@@ -56,20 +57,22 @@ async function runMonthlyBilling(month) {
 
 async function runCurrentMonthUsage() {
   if (isCurrentRunning) {
-    console.log("[scheduler] Skip: current month job already running");
+    logger.info("[scheduler] Skip: current month job already running");
     return;
   }
 
   isCurrentRunning = true;
   try {
     const currentMonth = getCurrentMonthYYYYMM();
-    console.log(
+    logger.info(
       `[scheduler] START update current month usage month=${currentMonth}`,
     );
     const result = await runUsageMonthly(currentMonth);
-    console.log("[scheduler] Current month usage updated:", result);
+    logger.info(
+      `[scheduler] Current month usage updated: ${JSON.stringify(result)}`,
+    );
   } catch (err) {
-    console.error("[scheduler] ERROR update current month:", err);
+    logger.error(`[scheduler] ERROR update current month: ${err.message}`, err);
   } finally {
     isCurrentRunning = false;
   }
@@ -91,9 +94,9 @@ function startScheduler() {
     await runCurrentMonthUsage();
   });
 
-  console.log("[scheduler] Cron scheduled:");
-  console.log(`[scheduler]   - Monthly billing  : ${cronMonthlyBilling}`);
-  console.log(`[scheduler]   - Current month    : ${cronCurrentMonth}`);
+  logger.info(`[scheduler] Cron scheduled:`);
+  logger.info(`[scheduler]   - Monthly billing  : ${cronMonthlyBilling}`);
+  logger.info(`[scheduler]   - Current month    : ${cronCurrentMonth}`);
 }
 
 module.exports = { startScheduler, runMonthlyBilling, runCurrentMonthUsage };

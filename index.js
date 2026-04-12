@@ -5,6 +5,7 @@ const app = require("./src/app");
 const db = require("./src/config/db");
 const { client: mqttClient, setIo } = require("./src/config/mqtt");
 const { startScheduler } = require("./src/jobs/scheduler");
+const logger = require("./src/config/logger"); // tambah ini
 const http = require("http");
 const { Server } = require("socket.io");
 
@@ -18,24 +19,24 @@ app.set("io", io);
 setIo(io);
 
 io.on("connection", (socket) => {
-  console.log("WebSocket connected:", socket.id);
+  logger.info(`WebSocket connected: ${socket.id}`);
   socket.on("disconnect", () => {
-    console.log("WebSocket disconnected:", socket.id);
+    logger.info(`WebSocket disconnected: ${socket.id}`);
   });
 });
 
 (async () => {
   try {
     await db.query("SELECT 1");
-    console.log("MySQL connected");
+    logger.info("MySQL connected");
 
     startScheduler();
 
     server.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+      logger.info(`Server running on http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error("Database connection failed:", error.message);
+    logger.error(`Database connection failed: ${error.message}`, error);
     process.exit(1);
   }
 })();

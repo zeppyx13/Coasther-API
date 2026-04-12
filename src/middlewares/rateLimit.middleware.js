@@ -4,8 +4,8 @@ dotenv.config();
 
 // General API — semua endpoint
 const generalLimiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_GENERAL_WINDOW_MS,
-  max: process.env.RATE_LIMIT_GENERAL_MAX,
+  windowMs: Number(process.env.RATE_LIMIT_GENERAL_WINDOW_MS),
+  max: Number(process.env.RATE_LIMIT_GENERAL_MAX),
   message: {
     success: false,
     message: "Terlalu banyak request, coba lagi nanti.",
@@ -16,8 +16,8 @@ const generalLimiter = rateLimit({
 
 // Auth — login, register, OTP (lebih ketat)
 const authLimiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_AUTH_WINDOW_MS,
-  max: process.env.RATE_LIMIT_AUTH_MAX,
+  windowMs: Number(process.env.RATE_LIMIT_AUTH_WINDOW_MS),
+  max: Number(process.env.RATE_LIMIT_AUTH_MAX),
   message: {
     success: false,
     message: "Terlalu banyak percobaan login, coba lagi dalam 15 menit.",
@@ -28,8 +28,8 @@ const authLimiter = rateLimit({
 
 // AI — Gemini calls (sangat ketat, hemat token)
 const aiLimiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_AI_WINDOW_MS,
-  max: process.env.RATE_LIMIT_AI_MAX,
+  windowMs: Number(process.env.RATE_LIMIT_AI_WINDOW_MS),
+  max: Number(process.env.RATE_LIMIT_AI_MAX),
   message: {
     success: false,
     message: "Limit AI request tercapai, coba lagi dalam 1 jam.",
@@ -40,8 +40,8 @@ const aiLimiter = rateLimit({
 
 // Scheduler manual trigger (sangat ketat)
 const schedulerLimiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_SCHEDULER_WINDOW_MS,
-  max: process.env.RATE_LIMIT_SCHEDULER_MAX,
+  windowMs: Number(process.env.RATE_LIMIT_SCHEDULER_WINDOW_MS),
+  max: Number(process.env.RATE_LIMIT_SCHEDULER_MAX),
   message: { success: false, message: "Limit scheduler trigger tercapai." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -49,8 +49,8 @@ const schedulerLimiter = rateLimit({
 
 // Relay control
 const relayLimiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_RELAY_WINDOW_MS,
-  max: process.env.RATE_LIMIT_RELAY_MAX,
+  windowMs: Number(process.env.RATE_LIMIT_RELAY_WINDOW_MS),
+  max: Number(process.env.RATE_LIMIT_RELAY_MAX),
   message: {
     success: false,
     message: "Terlalu banyak relay command, tunggu sebentar.",
