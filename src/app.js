@@ -23,6 +23,7 @@ const facilityRoutes = require("./routes/facility.routes");
 const meterRoutes = require("./routes/meter.routes");
 const paymentAdminRoutes = require("./routes/payment.admin.routes");
 const userAdminRoutes = require("./routes/user.admin.routes");
+const schedulerRoutes = require("./routes/scheduler.routes");
 // app init
 const app = express();
 
@@ -82,6 +83,7 @@ app.use("/api/facilities", facilityRoutes);
 app.use("/api/meters", meterRoutes);
 app.use("/api/payments-admin", paymentAdminRoutes);
 app.use("/api/users-admin", userAdminRoutes);
+app.use("/api/scheduler", schedulerRoutes);
 // 404 handler
 app.use(notFound);
 app.use(errorHandler);

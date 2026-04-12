@@ -1,10 +1,18 @@
 const cron = require("node-cron");
 const { runUsageMonthly } = require("./usageMonthly.job");
 const { generateInvoicesForMonth } = require("./invoiceMonthly.job");
-const logger = require("../config/logger");
 const { runOverdueInvoice } = require("./overdueInvoice.job");
+const logger = require("../config/logger");
+
 let isRunning = false;
 let isCurrentRunning = false;
+
+function getStatus() {
+  return {
+    billing_running: isRunning,
+    current_month_running: isCurrentRunning,
+  };
+}
 
 function getPrevMonthYYYYMM() {
   const now = new Date();
@@ -36,8 +44,11 @@ function getCronExpression(envKey, fallback) {
 
 async function runMonthlyBilling(month) {
   if (isRunning) {
-    logger.info("[scheduler] Skip: billing job already running");
-    return;
+    const err = new Error(
+      "Billing job sedang berjalan, coba beberapa saat lagi",
+    );
+    err.statusCode = 409;
+    throw err;
   }
 
   isRunning = true;
@@ -48,8 +59,15 @@ async function runMonthlyBilling(month) {
     const invRes = await generateInvoicesForMonth(month);
     logger.info(`[scheduler] INVOICES done: ${JSON.stringify(invRes)}`);
     logger.info(`[scheduler] DONE monthly billing month=${month}`);
+
+    return {
+      month,
+      usage: usageRes,
+      invoices: invRes,
+    };
   } catch (err) {
     logger.error(`[scheduler] ERROR monthly billing: ${err.message}`, err);
+    throw err;
   } finally {
     isRunning = false;
   }
@@ -98,7 +116,11 @@ function startScheduler() {
 
   cron.schedule(cronMonthlyBilling, async () => {
     const prevMonth = getPrevMonthYYYYMM();
-    await runMonthlyBilling(prevMonth);
+    try {
+      await runMonthlyBilling(prevMonth);
+    } catch (e) {
+      logger.error(`[scheduler] Monthly billing error: ${e.message}`, e);
+    }
   });
 
   cron.schedule(cronCurrentMonth, async () => {
@@ -115,4 +137,10 @@ function startScheduler() {
   logger.info(`[scheduler]   - Overdue check    : ${cronOverdue}`);
 }
 
-module.exports = { startScheduler, runMonthlyBilling, runCurrentMonthUsage };
+module.exports = {
+  startScheduler,
+  runMonthlyBilling,
+  runCurrentMonthUsage,
+  runOverdueCheck,
+  getStatus,
+};
