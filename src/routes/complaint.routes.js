@@ -7,13 +7,6 @@ const complaintController = require("../controllers/complaint.controller");
 router.use(auth);
 router.use(requireRole(["tenant", "admin", "manager"]));
 
-// Tenant routes
-router.get("/", complaintController.list);
-router.post("/", complaintController.create);
-router.get("/:id", complaintController.detail);
-router.patch("/:id", complaintController.update);
-
-// Admin routes
 router.get(
   "/admin/complaints",
   requireRole(["admin", "manager"]),
@@ -29,5 +22,11 @@ router.patch(
   requireRole(["admin", "manager"]),
   complaintController.adminUpdate,
 );
+
+// Tenant routes — /:id di bawah
+router.get("/", complaintController.list);
+router.post("/", complaintController.create);
+router.get("/:id", complaintController.detail);
+router.patch("/:id", complaintController.update);
 
 module.exports = router;
