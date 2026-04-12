@@ -1,5 +1,24 @@
 const overdueModel = require("../models/overdue.model");
 const logger = require("../config/logger");
+const { sendMail } = require("../lib/mailer");
+const { invoiceOverdueTemplate } = require("../lib/emailTemplates");
+const db = require("../config/db");
+
+async function getUserData(user_id) {
+  const [rows] = await db.query(
+    `SELECT name, email FROM users WHERE id = ? LIMIT 1`,
+    [user_id],
+  );
+  return rows[0] || null;
+}
+
+async function getRoomNumber(room_id) {
+  const [rows] = await db.query(
+    `SELECT number FROM rooms WHERE id = ? LIMIT 1`,
+    [room_id],
+  );
+  return rows[0]?.number || "-";
+}
 
 async function runOverdueInvoice() {
   const lateFeeFlat = await overdueModel.getLateFeeFlat();
@@ -19,7 +38,6 @@ async function runOverdueInvoice() {
       const elec = Number(inv.elec_cost);
       const discount = Number(inv.discount_amount);
       const fine = lateFeeFlat;
-
       const total = rent + water + elec - discount + fine;
 
       await overdueModel.markOverdueWithFine(inv.id, {
@@ -30,6 +48,32 @@ async function runOverdueInvoice() {
       logger.info(
         `[overdue] Invoice #${inv.id} (user:${inv.user_id} room:${inv.room_id} bulan:${inv.month}) → overdue | denda: ${fine} | total baru: ${total}`,
       );
+
+      try {
+        const user = await getUserData(inv.user_id);
+        const roomNumber = await getRoomNumber(inv.room_id);
+
+        if (user?.email) {
+          const { subject, html } = invoiceOverdueTemplate({
+            name: user.name,
+            month: inv.month,
+            due_date: inv.due_date,
+            total_amount: total,
+            fine_amount: fine,
+            room_number: roomNumber,
+          });
+
+          await sendMail({ to: user.email, subject, html });
+          logger.info(
+            `[overdue] Email terkirim ke ${user.email} untuk invoice #${inv.id}`,
+          );
+        }
+      } catch (mailErr) {
+        logger.error(
+          `[overdue] Gagal kirim email invoice #${inv.id}: ${mailErr.message}`,
+          mailErr,
+        );
+      }
 
       updated++;
     } catch (err) {

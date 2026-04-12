@@ -1,4 +1,7 @@
 const invoiceModel = require("../models/invoiceMonthly.model");
+const { sendMail } = require("../lib/mailer");
+const { invoiceCreatedTemplate } = require("../lib/emailTemplates");
+const db = require("../config/db");
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -105,7 +108,29 @@ async function generateInvoicesForMonth(month) {
       total_amount,
       status,
     });
+    try {
+      const [userRows] = await db.query(
+        `SELECT name, email FROM users WHERE id = ? LIMIT 1`,
+        [lease.user_id],
+      );
+      const user = userRows[0];
 
+      if (user?.email) {
+        const { subject, html } = invoiceCreatedTemplate({
+          name: user.name,
+          month,
+          due_date,
+          total_amount,
+          room_number: lease.room_number,
+        });
+        await sendMail({ to: user.email, subject, html });
+      }
+    } catch (mailErr) {
+      console.error(
+        `[invoice] Gagal kirim email user ${lease.user_id}:`,
+        mailErr.message,
+      );
+    }
     processed += 1;
   }
 
