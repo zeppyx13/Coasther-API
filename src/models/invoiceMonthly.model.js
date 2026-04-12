@@ -90,21 +90,20 @@ async function upsertInvoice({
        ?, ?, ?,
        ?, ?)
     ON DUPLICATE KEY UPDATE
-      room_id = VALUES(room_id),
-      user_id = VALUES(user_id),
-      due_date = VALUES(due_date),
-      rent_amount = VALUES(rent_amount),
-      water_used = VALUES(water_used),
-      water_cost = VALUES(water_cost),
-      elec_used = VALUES(elec_used),
-      elec_cost = VALUES(elec_cost),
-      fine_amount = VALUES(fine_amount),
+      room_id          = VALUES(room_id),
+      user_id          = VALUES(user_id),
+      due_date         = VALUES(due_date),
+      rent_amount      = VALUES(rent_amount),
+      water_used       = VALUES(water_used),
+      water_cost       = VALUES(water_cost),
+      elec_used        = VALUES(elec_used),
+      elec_cost        = VALUES(elec_cost),
       discount_percent = VALUES(discount_percent),
-      discount_amount = VALUES(discount_amount),
-      total_amount = VALUES(total_amount),
-      -- status jangan diubah kalau sudah paid (biar aman)
-      status = IF(status = 'paid', status, VALUES(status)),
-      updated_at = CURRENT_TIMESTAMP
+      discount_amount  = VALUES(discount_amount),
+      fine_amount      = IF(status IN ('overdue', 'paid'), fine_amount, VALUES(fine_amount)),
+      total_amount     = IF(status IN ('overdue', 'paid'), total_amount, VALUES(total_amount)),
+      status           = IF(status IN ('overdue', 'paid'), status, VALUES(status)),
+      updated_at       = CURRENT_TIMESTAMP
     `,
     [
       lease_id,
