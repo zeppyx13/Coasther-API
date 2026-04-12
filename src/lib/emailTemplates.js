@@ -112,4 +112,78 @@ function invoiceOverdueTemplate({
   };
 }
 
-module.exports = { invoiceCreatedTemplate, invoiceOverdueTemplate };
+function paymentSuccessTemplate({
+  name,
+  month,
+  room_number,
+  amount,
+  paid_at,
+  order_id,
+}) {
+  const formatter = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  });
+
+  const paidDate = new Date(paid_at).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return {
+    subject: `[Coasther] ✅ Pembayaran Berhasil - Kamar ${room_number} Bulan ${month}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+        <div style="background: #7B1113; padding: 24px; border-radius: 8px 8px 0 0;">
+          <h1 style="color: #C6A971; margin: 0; font-size: 24px;">Coasther</h1>
+          <p style="color: #fff; margin: 4px 0 0;">Small Cost, Big Comfort</p>
+        </div>
+        <div style="border: 1px solid #e0e0e0; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+          <div style="text-align: center; padding: 16px 0;">
+            <div style="font-size: 48px;">✅</div>
+            <h2 style="color: #1F8A4C; margin: 8px 0;">Pembayaran Berhasil!</h2>
+          </div>
+          <p>Halo <b>${name}</b>,</p>
+          <p>Pembayaran sewa kamu telah berhasil dikonfirmasi. Berikut detailnya:</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr style="background: #f5f5f5;">
+              <td style="padding: 10px; border: 1px solid #e0e0e0;">Kamar</td>
+              <td style="padding: 10px; border: 1px solid #e0e0e0;"><b>Kamar ${room_number}</b></td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #e0e0e0;">Periode</td>
+              <td style="padding: 10px; border: 1px solid #e0e0e0;"><b>${month}</b></td>
+            </tr>
+            <tr style="background: #f5f5f5;">
+              <td style="padding: 10px; border: 1px solid #e0e0e0;">No. Order</td>
+              <td style="padding: 10px; border: 1px solid #e0e0e0;">${order_id}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #e0e0e0;">Waktu Bayar</td>
+              <td style="padding: 10px; border: 1px solid #e0e0e0;">${paidDate}</td>
+            </tr>
+            <tr style="background: #f0fff4;">
+              <td style="padding: 10px; border: 1px solid #e0e0e0;"><b>Total Dibayar</b></td>
+              <td style="padding: 10px; border: 1px solid #e0e0e0; color: #1F8A4C;">
+                <b>${formatter.format(Number(amount))}</b>
+              </td>
+            </tr>
+          </table>
+          <p>Terima kasih telah membayar tepat waktu! 🎉</p>
+          <br/>
+          <p style="color: #999; font-size: 12px;">Email ini dikirim otomatis oleh sistem Coasther. Jangan balas email ini.</p>
+        </div>
+      </div>
+    `,
+  };
+}
+
+module.exports = {
+  invoiceCreatedTemplate,
+  invoiceOverdueTemplate,
+  paymentSuccessTemplate,
+};

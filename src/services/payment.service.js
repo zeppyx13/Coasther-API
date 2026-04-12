@@ -1,6 +1,8 @@
 const crypto = require("crypto");
 const { snap } = require("../config/midtrans");
 const paymentModel = require("../models/payment.model");
+const { sendMail } = require("../lib/mailer");
+const { paymentSuccessTemplate } = require("../lib/emailTemplates");
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -150,6 +152,7 @@ async function handleMidtransWebhook(notification) {
     signature_key,
   });
   if (!okSig) throw httpError("Invalid signature", 401);
+
   const payment = await paymentModel.findPaymentByProviderOrder(
     "midtrans",
     order_id,
@@ -157,6 +160,7 @@ async function handleMidtransWebhook(notification) {
   if (!payment) {
     return { handled: false, message: "Payment not found (ignored)" };
   }
+
   await paymentModel.insertPaymentEvent({
     payment_id: payment.id,
     event_type: "midtrans_notification",
@@ -190,6 +194,29 @@ async function handleMidtransWebhook(notification) {
       payment.invoice_id,
       newInvoiceStatus,
     );
+  }
+
+  if (newPaymentStatus === "paid") {
+    try {
+      const invoice = await paymentModel.findInvoiceById(payment.invoice_id);
+
+      if (invoice?.user_email) {
+        const { subject, html } = paymentSuccessTemplate({
+          name: invoice.user_name,
+          month: invoice.month,
+          room_number: invoice.room_number,
+          amount: updateData.amount,
+          paid_at: updateData.paid_at,
+          order_id: order_id,
+        });
+
+        await sendMail({ to: invoice.user_email, subject, html });
+      }
+    } catch (mailErr) {
+      console.error(
+        `[payment] Gagal kirim email konfirmasi: ${mailErr.message}`,
+      );
+    }
   }
 
   return { handled: true, message: "Webhook processed" };
