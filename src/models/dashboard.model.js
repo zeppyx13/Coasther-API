@@ -46,7 +46,7 @@ async function getCurrentMonthWaterUsage() {
     WHERE month = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')
   `);
 
-  return Number(rows[0]?.waterUsage || 0);
+  return Number((rows[0]?.waterUsage / 1000 || 0).toFixed(3));
 }
 
 async function getLastMonthWaterUsage() {
@@ -56,7 +56,7 @@ async function getLastMonthWaterUsage() {
     WHERE month = DATE_FORMAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), '%Y-%m')
   `);
 
-  return Number(rows[0]?.waterUsage || 0);
+  return Number((rows[0]?.waterUsage / 1000 || 0).toFixed(3));
 }
 
 async function getCurrentMonthElectricityUsage() {

@@ -30,7 +30,7 @@ async function getTenantDashboard(userId) {
 }
 
 function calculateGrowthPercentage(currentValue, previousValue) {
-  if (previousValue === 0) {
+  if (previousValue < 0.001) {
     return currentValue > 0 ? 100 : 0;
   }
 

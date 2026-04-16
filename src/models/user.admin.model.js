@@ -9,28 +9,35 @@ async function findAll({ role, search, page = 1, limit = 10 } = {}) {
   const params = [];
 
   if (role) {
-    where.push("role = ?");
+    where.push("u.role = ?");
     params.push(role);
   }
 
   if (search) {
-    where.push("(name LIKE ? OR email LIKE ?)");
+    where.push("(u.name LIKE ? OR u.email LIKE ?)");
     params.push(`%${search}%`, `%${search}%`);
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   const [rows] = await db.query(
-    `SELECT id, name, email, role, phone, created_at, updated_at
-     FROM users
+    `SELECT u.id, u.name, u.email, u.role, u.phone, u.created_at, u.updated_at,
+            l.id AS lease_id, l.status AS lease_status, r.number AS room_number, r.floor AS room_floor
+     FROM users u
+     LEFT JOIN leases l ON l.user_id = u.id AND l.status = 'active'
+     LEFT JOIN rooms r ON r.id = l.room_id
      ${whereSql}
-     ORDER BY created_at DESC
+     ORDER BY u.created_at DESC
      LIMIT ? OFFSET ?`,
     [...params, l, offset],
   );
 
   const [[{ total }]] = await db.query(
-    `SELECT COUNT(*) AS total FROM users ${whereSql}`,
+    `SELECT COUNT(*) AS total 
+     FROM users u
+     LEFT JOIN leases l ON l.user_id = u.id AND l.status = 'active'
+     LEFT JOIN rooms r ON r.id = l.room_id
+     ${whereSql}`,
     params,
   );
 
