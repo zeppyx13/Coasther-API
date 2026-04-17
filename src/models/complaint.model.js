@@ -121,9 +121,12 @@ async function findAll({ status, page = 1, limit = 10 }) {
       c.created_at,
       c.closed_at,
       r.number AS room_number,
-      r.floor  AS room_floor
+      r.floor  AS room_floor,
+      u.name   AS tenant_name,
+      u.email  AS tenant_email
     FROM complaints c
     JOIN rooms r ON r.id = c.room_id
+    JOIN users u ON u.id = c.user_id
     ${whereSql}
     ORDER BY c.created_at DESC, c.id DESC
     LIMIT ? OFFSET ?

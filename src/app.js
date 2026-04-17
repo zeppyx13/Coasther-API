@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-
+const path = require("path");
 // routes
 const authRoutes = require("./routes/auth.routes");
 const roomRoutes = require("./routes/room.routes");
@@ -56,6 +56,15 @@ app.use(generalLimiter);
 app.use("/api/auth", authLimiter);
 app.use("/api/ai", aiLimiter);
 app.use("/api/scheduler", schedulerLimiter);
+// Serve static files dari folder public
+app.use(
+  "/public",
+  (req, res, next) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
+  express.static(path.join(__dirname, "../public")),
+);
 // routes
 app.get("/", (req, res) => {
   res.status(200).json({

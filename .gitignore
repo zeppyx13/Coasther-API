@@ -26,3 +26,5 @@ temp/
 *.tsbuildinfo
 .idea/
 logs/*
+public/assets/*
+public/img/*
