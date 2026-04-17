@@ -11,8 +11,20 @@ router.get(
   requireRole(["tenant", "admin", "manager"]),
   dashboardController.tenantDashboard,
 );
-router.get("/stats", dashboardController.getDashboardStats);
-router.get("/chart", dashboardController.getDashboardChart);
+
+router.get(
+  "/stats",
+  auth,
+  requireRole(["admin", "manager"]),
+  dashboardController.getDashboardStats,
+);
+
+router.get(
+  "/chart",
+  auth,
+  requireRole(["admin", "manager"]),
+  dashboardController.getDashboardChart,
+);
 router.get("/summary", dashboardController.getDashboardSummary);
 
 module.exports = router;

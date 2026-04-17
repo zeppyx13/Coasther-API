@@ -59,10 +59,23 @@ const relayLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Upload
+const uploadLimiter = rateLimit({
+    windowMs: 60 * 1000,      // 1 menit
+    max: 10,                   // max 10 upload per menit per IP
+    message: {
+        success: false,
+        message: "Too many upload requests, please try again later",
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 module.exports = {
   generalLimiter,
   authLimiter,
   aiLimiter,
   schedulerLimiter,
   relayLimiter,
+  uploadLimiter,
 };

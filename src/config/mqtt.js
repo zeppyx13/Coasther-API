@@ -1,5 +1,6 @@
 const mqtt = require("mqtt");
 const db = require("./db");
+const logger = require("./logger");
 
 let _io = null;
 
@@ -16,16 +17,16 @@ const client = mqtt.connect({
 });
 
 client.on("connect", () => {
-  console.log("MQTT Connected");
+  logger.info("MQTT Connected");
 
   client.subscribe("coasther/meter/+/reading", (err) => {
-    if (err) console.error("Subscribe meter error:", err);
-    else console.log("Subscribed to meter readings");
+    if (err) logger.error("Subscribe meter error:", err);
+    else logger.info("Subscribed to meter readings");
   });
 
   client.subscribe("coasther/telemetry/+/live", (err) => {
-    if (err) console.error("Subscribe telemetry error:", err);
-    else console.log("Subscribed to live telemetry");
+    if (err) logger.error("Subscribe telemetry error:", err);
+    else logger.info("Subscribed to live telemetry");
   });
 });
 
@@ -35,8 +36,8 @@ client.on("message", async (topic, message) => {
     const parts = topic.split("/");
     const iotService = require("../services/iot.service");
 
-    console.log("MQTT Topic:", topic);
-    console.log("Payload:", payload);
+    logger.info("MQTT Topic: " + topic);
+    logger.info("Payload: " + JSON.stringify(payload));
 
     if (
       parts.length === 4 &&
@@ -55,13 +56,13 @@ client.on("message", async (topic, message) => {
       );
 
       if (!rows.length) {
-        console.warn("Meter device not registered:", deviceUid);
+        logger.warn("Meter device not registered: " + deviceUid);
         return;
       }
 
       const meter = rows[0];
       const result = await iotService.ingestMeterReading({ meter, payload });
-      console.log("Meter reading stored:", result);
+      logger.info("Meter reading stored: " + JSON.stringify(result));
 
       if (_io) {
         _io.emit("meter_update", {
@@ -87,7 +88,7 @@ client.on("message", async (topic, message) => {
         roomTopicId,
         payload,
       });
-      console.log("Live telemetry updated:", result);
+      logger.info("Live telemetry updated: " + JSON.stringify(result));
 
       if (_io) {
         _io.emit("telemetry_update", {
@@ -99,15 +100,15 @@ client.on("message", async (topic, message) => {
       return;
     }
 
-    console.warn("Unhandled MQTT topic:", topic);
+    logger.warn("Unhandled MQTT topic: " + topic);
   } catch (err) {
-    console.error("MQTT processing error:", err.message);
-    console.error("MQTT raw topic:", topic);
-    console.error("MQTT raw payload:", message.toString());
+    logger.error("MQTT processing error: " + err.message);
+    logger.error("MQTT raw topic: " + topic);
+    logger.error("MQTT raw payload: " + message.toString());
   }
 });
 
-client.on("error", (err) => console.error("MQTT Error:", err.message));
-client.on("reconnect", () => console.log("MQTT reconnecting..."));
+client.on("error", (err) => logger.error("MQTT Error: " + err.message));
+client.on("reconnect", () => logger.info("MQTT reconnecting..."));
 
 module.exports = { client, setIo };

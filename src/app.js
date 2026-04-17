@@ -49,6 +49,7 @@ const {
   aiLimiter,
   schedulerLimiter,
   relayLimiter,
+  uploadLimiter,
 } = require("./middlewares/rateLimit.middleware");
 
 // LIMITER
@@ -57,6 +58,7 @@ app.use(generalLimiter);
 app.use("/api/auth", authLimiter);
 app.use("/api/ai", aiLimiter);
 app.use("/api/scheduler", schedulerLimiter);
+app.use("/api/upload", uploadLimiter);
 // Serve static files dari folder public
 app.use(
   "/public",

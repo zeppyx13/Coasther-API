@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
+const logger = require("../config/logger");
 dotenv.config();
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
@@ -21,6 +22,6 @@ async function sendMail({ to, subject, html }) {
 }
 transporter
   .verify()
-  .then(() => console.log("SMTP ready"))
-  .catch(console.error);
+  .then(() => logger.info("SMTP ready"))
+  .catch((err) => logger.error(err));
 module.exports = { sendMail };
