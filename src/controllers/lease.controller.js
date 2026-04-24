@@ -49,4 +49,29 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { list, detail, create, update, remove };
+async function tenantBooking(req, res) {
+  try {
+    const { room_id, start_date, end_date, note } = req.body;
+    const user_id = req.user.id;
+
+    const roomModel = require("../models/room.model");
+    const room = await roomModel.findById(room_id);
+    if (!room) return fail(res, "Room not found", 404);
+    if (!room.is_available) return fail(res, "Room not available", 409);
+
+    const result = await leaseService.createLease({
+      user_id,
+      room_id,
+      start_date,
+      end_date: end_date || null,
+      monthly_rent_snapshot: room.price_monthly,
+      note: note || null,
+    });
+
+    return ok(res, result, "Booking berhasil", 201);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 400);
+  }
+}
+
+module.exports = { list, detail, create, update, remove, tenantBooking };
