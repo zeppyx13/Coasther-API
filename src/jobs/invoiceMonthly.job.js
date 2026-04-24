@@ -1,6 +1,8 @@
 const invoiceModel = require("../models/invoiceMonthly.model");
 const { sendMail } = require("../lib/mailer");
 const { invoiceCreatedTemplate } = require("../lib/emailTemplates");
+const { sendNotification } = require("../lib/fcm-sender");
+const userModel = require("../models/user.model");
 const db = require("../config/db");
 
 function httpError(message, statusCode = 400) {
@@ -115,6 +117,22 @@ async function generateInvoicesForMonth(month) {
       total_amount,
       status,
     });
+
+    // FCM Notification
+    try {
+      const user = await userModel.findById(lease.user_id);
+      if (user?.fcm_token) {
+        sendNotification({
+          fcm_token: user.fcm_token,
+          title: "Tagihan Baru 📋",
+          body: `Tagihan bulan ${month} sebesar Rp${total_amount.toLocaleString('id-ID')} sudah tersedia.`,
+          data: { type: "invoice", month }
+        }).catch(err => console.error("FCM error:", err));
+      }
+    } catch (e) {
+      console.error("Gagal ambil data user untuk FCM:", e);
+    }
+
     try {
       const user = await getUserEmail(lease.user_id);
 

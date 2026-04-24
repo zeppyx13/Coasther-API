@@ -1,4 +1,6 @@
 const announcementModel = require("../models/announcement.model");
+const userModel = require("../models/user.model");
+const { sendNotification } = require("../lib/fcm-sender");
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -22,6 +24,24 @@ async function getAnnouncementDetail(id) {
 
 async function createAnnouncement(payload) {
   const id = await announcementModel.create(payload);
+
+  // FCM Broadcast
+  try {
+    const users = await userModel.findAllWithFCMToken();
+    for (const user of users) {
+      if (user.fcm_token) {
+        sendNotification({
+          fcm_token: user.fcm_token,
+          title: "Pengumuman Baru 📢",
+          body: payload.title,
+          data: { type: "announcement" }
+        }).catch(err => console.error(`FCM error to ${user.id}:`, err));
+      }
+    }
+  } catch (e) {
+    console.error("Gagal broadcast FCM:", e);
+  }
+
   return getAnnouncementDetail(id);
 }
 

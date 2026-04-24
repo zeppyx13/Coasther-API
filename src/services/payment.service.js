@@ -1,8 +1,10 @@
 const crypto = require("crypto");
 const { snap } = require("../config/midtrans");
 const paymentModel = require("../models/payment.model");
+const userModel = require("../models/user.model");
 const { sendMail } = require("../lib/mailer");
 const { paymentSuccessTemplate } = require("../lib/emailTemplates");
+const { sendNotification } = require("../lib/fcm-sender");
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -199,6 +201,21 @@ async function handleMidtransWebhook(notification) {
   if (newPaymentStatus === "paid") {
     try {
       const invoice = await paymentModel.findInvoiceById(payment.invoice_id);
+
+      // FCM Notification
+      try {
+        const user = await userModel.findById(invoice.user_id);
+        if (user?.fcm_token) {
+          sendNotification({
+            fcm_token: user.fcm_token,
+            title: "Pembayaran Berhasil ✅",
+            body: `Pembayaran tagihan bulan ${invoice.month} sebesar Rp${updateData.amount.toLocaleString('id-ID')} telah diterima.`,
+            data: { type: "payment" }
+          }).catch(err => console.error("FCM error:", err));
+        }
+      } catch (e) {
+        console.error("Gagal kirim FCM:", e);
+      }
 
       if (invoice?.user_email) {
         const { subject, html } = paymentSuccessTemplate({

@@ -160,6 +160,12 @@ async function getAdminUsers() {
   );
   return rows;
 }
+async function findAllWithFCMToken() {
+  const [rows] = await db.query(
+    "SELECT id, fcm_token FROM users WHERE fcm_token IS NOT NULL AND role = 'tenant'",
+  );
+  return rows;
+}
 module.exports = {
   findByEmail,
   findById,
@@ -177,4 +183,5 @@ module.exports = {
   hardDeleteUserById,
   getAllUsers,
   getAdminUsers,
+  findAllWithFCMToken,
 };

@@ -1,5 +1,7 @@
 const complaintModel = require("../models/complaint.model");
 const tenantModel = require("../models/tenant.model");
+const userModel = require("../models/user.model");
+const { sendNotification } = require("../lib/fcm-sender");
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -103,6 +105,22 @@ async function updateComplaintAdmin(id, payload) {
   if (!existing) throw httpError("Complaint not found", 404);
 
   await complaintModel.updateComplaintAdmin(id, payload);
+
+  // FCM Notification
+  try {
+    const user = await userModel.findById(existing.user_id);
+    if (user?.fcm_token && payload.status) {
+      sendNotification({
+        fcm_token: user.fcm_token,
+        title: "Update Keluhan 🔔",
+        body: `Status keluhan "${existing.title}" kamu diperbarui menjadi ${payload.status}.`,
+        data: { type: "complaint" }
+      }).catch(err => console.error("FCM error:", err));
+    }
+  } catch (e) {
+    console.error("Gagal kirim FCM:", e);
+  }
+
   return getComplaintDetailAdmin(id);
 }
 module.exports = {

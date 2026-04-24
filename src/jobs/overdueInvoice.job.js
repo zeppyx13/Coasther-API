@@ -2,11 +2,13 @@ const overdueModel = require("../models/overdue.model");
 const logger = require("../config/logger");
 const { sendMail } = require("../lib/mailer");
 const { invoiceOverdueTemplate } = require("../lib/emailTemplates");
+const { sendNotification } = require("../lib/fcm-sender");
+const userModel = require("../models/user.model");
 const db = require("../config/db");
 
 async function getUserData(user_id) {
   const [rows] = await db.query(
-    `SELECT name, email FROM users WHERE id = ? LIMIT 1`,
+    `SELECT id, name, email FROM users WHERE id = ? LIMIT 1`,
     [user_id],
   );
   return rows[0] || null;
@@ -52,6 +54,21 @@ async function runOverdueInvoice() {
       try {
         const user = await getUserData(inv.user_id);
         const roomNumber = await getRoomNumber(inv.room_id);
+
+        // FCM Notification
+        try {
+          const fullUser = await userModel.findById(inv.user_id);
+          if (fullUser?.fcm_token) {
+            sendNotification({
+              fcm_token: fullUser.fcm_token,
+              title: "Tagihan Terlambat ⚠️",
+              body: `Tagihan bulan ${inv.month} kamu sudah melewati jatuh tempo. Segera lakukan pembayaran.`,
+              data: { type: "overdue", month: inv.month }
+            }).catch(err => logger.error("FCM error:", err));
+          }
+        } catch (e) {
+          logger.error("Gagal kirim FCM:", e);
+        }
 
         if (user?.email) {
           const { subject, html } = invoiceOverdueTemplate({
