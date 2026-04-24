@@ -1,4 +1,5 @@
 const admin = require("firebase-admin");
+const logger = require("../config/logger");
 
 if (!admin.apps.length) {
   const serviceAccount = require("../../coasther-firebase-adminsdk-fbsvc-f2c631db39.json");
@@ -22,9 +23,9 @@ async function sendNotification({ fcm_token, title, body, data = {} }) {
         },
       },
     });
-    console.log(`[FCM] Sent: ${title} → ${fcm_token.slice(0, 20)}...`);
+    logger.info(`[FCM] Sent: ${title} → ${fcm_token.slice(0, 20)}...`);
   } catch (e) {
-    console.log("[FCM] Error:", e.message);
+    logger.error("[FCM] Error:", e.message);
   }
 }
 

@@ -134,12 +134,7 @@ async function adminChat({ question, conversationHistory = [] }) {
   const systemPrompt = buildSystemPrompt(context);
 
   // Bangun history percakapan untuk multi-turn
-  const contents = [
-    {
-      role: "user",
-      parts: [{ text: systemPrompt + "\n\nPertanyaan admin: " + question }],
-    },
-  ];
+  const contents = [];
 
   // Tambahkan riwayat percakapan sebelumnya (max 5 pesan terakhir)
   if (conversationHistory.length > 0) {
@@ -148,8 +143,14 @@ async function adminChat({ question, conversationHistory = [] }) {
       role: msg.role,
       parts: [{ text: msg.content }],
     }));
-    contents.splice(0, 0, ...historyContents);
+    contents.push(...historyContents);
   }
+
+  // Tambahkan pesan saat ini (dengan system prompt)
+  contents.push({
+    role: "user",
+    parts: [{ text: systemPrompt + "\n\nPertanyaan admin: " + question }],
+  });
 
   const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 

@@ -1,5 +1,6 @@
 const announcementModel = require("../models/announcement.model");
 const userModel = require("../models/user.model");
+const logger = require("../config/logger");
 const { sendNotification } = require("../lib/fcm-sender");
 
 function httpError(message, statusCode = 400) {
@@ -35,11 +36,11 @@ async function createAnnouncement(payload) {
           title: "Pengumuman Baru 📢",
           body: payload.title,
           data: { type: "announcement" }
-        }).catch(err => console.error(`FCM error to ${user.id}:`, err));
+        }).catch(err => logger.error(`FCM error to ${user.id}:`, err));
       }
     }
   } catch (e) {
-    console.error("Gagal broadcast FCM:", e);
+    logger.error("Gagal broadcast FCM:", e);
   }
 
   return getAnnouncementDetail(id);

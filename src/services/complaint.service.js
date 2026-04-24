@@ -1,6 +1,7 @@
 const complaintModel = require("../models/complaint.model");
 const tenantModel = require("../models/tenant.model");
 const userModel = require("../models/user.model");
+const logger = require("../config/logger");
 const { sendNotification } = require("../lib/fcm-sender");
 
 function httpError(message, statusCode = 400) {
@@ -115,10 +116,10 @@ async function updateComplaintAdmin(id, payload) {
         title: "Update Keluhan 🔔",
         body: `Status keluhan "${existing.title}" kamu diperbarui menjadi ${payload.status}.`,
         data: { type: "complaint" }
-      }).catch(err => console.error("FCM error:", err));
+      }).catch(err => logger.error("FCM error:", err));
     }
   } catch (e) {
-    console.error("Gagal kirim FCM:", e);
+    logger.error("Gagal kirim FCM:", e);
   }
 
   return getComplaintDetailAdmin(id);
