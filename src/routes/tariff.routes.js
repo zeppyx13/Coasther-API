@@ -7,7 +7,7 @@ const tariffController = require("../controllers/tariff.controller");
 router.get(
   "/",
   auth,
-  requireRole(["admin", "manager"]),
+  requireRole(["admin", "manager", "tenant"]),
   tariffController.getTariff,
 );
 
