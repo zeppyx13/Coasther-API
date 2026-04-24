@@ -25,6 +25,7 @@ const paymentAdminRoutes = require("./routes/payment.admin.routes");
 const userAdminRoutes = require("./routes/user.admin.routes");
 const schedulerRoutes = require("./routes/scheduler.routes");
 const uploadRoutes = require("./routes/upload.routes");
+const notificationRoutes = require("./routes/notification.routes");
 // app init
 const app = express();
 
@@ -97,6 +98,7 @@ app.use("/api/payments-admin", paymentAdminRoutes);
 app.use("/api/users-admin", userAdminRoutes);
 app.use("/api/scheduler", schedulerRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/notifications", notificationRoutes);
 // 404 handler
 app.use(notFound);
 app.use(errorHandler);

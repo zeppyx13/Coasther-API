@@ -1,0 +1,31 @@
+const admin = require("firebase-admin");
+
+if (!admin.apps.length) {
+  const serviceAccount = require("../../coasther-firebase-adminsdk-fbsvc-f2c631db39.json");
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
+
+async function sendNotification({ fcm_token, title, body, data = {} }) {
+  if (!fcm_token) return;
+  try {
+    await admin.messaging().send({
+      token: fcm_token,
+      notification: { title, body },
+      data,
+      android: {
+        priority: "high",
+        notification: {
+          sound: "default",
+          channelId: "coasther_default",
+        },
+      },
+    });
+    console.log(`[FCM] Sent: ${title} → ${fcm_token.slice(0, 20)}...`);
+  } catch (e) {
+    console.log("[FCM] Error:", e.message);
+  }
+}
+
+module.exports = { sendNotification };
