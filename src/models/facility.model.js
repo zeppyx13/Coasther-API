@@ -38,6 +38,10 @@ async function deleteById(id) {
   await db.query(`DELETE FROM facilities WHERE id = ?`, [id]);
 }
 
+async function deleteFromRooms(facility_id) {
+  await db.query('DELETE FROM room_facilities WHERE facility_id = ?', [facility_id]);
+}
+
 module.exports = {
   findAll,
   findById,
@@ -45,4 +49,5 @@ module.exports = {
   create,
   updateById,
   deleteById,
+  deleteFromRooms,
 };

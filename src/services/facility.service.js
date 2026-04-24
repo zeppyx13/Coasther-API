@@ -42,6 +42,7 @@ async function deleteFacility(id) {
   const existing = await facilityModel.findById(id);
   if (!existing) throw httpError("Facility not found", 404);
 
+  await facilityModel.deleteFromRooms(id);
   await facilityModel.deleteById(id);
   return { deleted: true };
 }
