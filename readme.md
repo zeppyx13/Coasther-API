@@ -5,6 +5,7 @@ Base URL (local):
 ```
 http://localhost:5000
 ```
+
 Semua response menggunakan format JSON standar:
 
 ```json
@@ -16,10 +17,11 @@ Semua response menggunakan format JSON standar:
 ```
 
 ---
+
 ## Demo Akun
 
 email : gn.nanda0@gmail.com
-pw    : Admin#1234
+pw : Admin#1234
 
 ## Authentication
 
@@ -271,6 +273,61 @@ Body (close):
 ```json
 { "status": "closed" }
 ```
+
+---
+
+## AI Chat (Admin Only)
+
+### Chat with AI
+
+**POST** `/api/ai/admin-chat`
+
+Body:
+
+```json
+{
+  "question": "Berapa tagihan yang belum lunas bulan ini?",
+  "conversationHistory": [
+    { "role": "user", "content": "Hai" },
+    {
+      "role": "model",
+      "content": "Halo! Ada yang bisa saya bantu terkait data kost hari ini?"
+    }
+  ]
+}
+```
+
+---
+
+## Announcements
+
+### List Announcements (Public)
+
+**GET** `/api/announcements`
+
+### Create Announcement (Admin)
+
+**POST** `/api/announcements`
+
+### Update Announcement (Admin)
+
+**PATCH** `/api/announcements/:id`
+
+### Delete Announcement (Admin)
+
+**DELETE** `/api/announcements/:id`
+
+---
+
+## 🔔 Push Notifications
+
+Sistem menggunakan Firebase Cloud Messaging (FCM) untuk memberikan notifikasi real-time kepada tenant untuk kejadian berikut:
+
+- **Tagihan Baru**: Saat invoice bulanan digenerate.
+- **Tagihan Terlambat**: Saat status invoice berubah menjadi `overdue`.
+- **Pembayaran Berhasil**: Saat pembayaran via Midtrans telah terkonfirmasi (`paid`).
+- **Update Keluhan**: Saat admin memperbarui status keluhan (complaint).
+- **Pengumuman**: Broadcast ke seluruh tenant saat admin membuat pengumuman baru.
 
 ---
 
