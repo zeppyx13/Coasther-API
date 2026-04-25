@@ -1,5 +1,10 @@
 # Coasther API Documentation
 
+This project is licensed under GPL v3.
+
+For commercial usage without open-source obligation,
+please contact the author.
+
 Base URL (local):
 
 ```
