@@ -4,6 +4,7 @@ const { invoiceCreatedTemplate } = require("../lib/emailTemplates");
 const { sendNotification } = require("../lib/fcm-sender");
 const userModel = require("../models/user.model");
 const db = require("../config/db");
+const logger = require("../config/logger");
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -49,14 +50,6 @@ function toNumber3(x) {
   return Math.round(n * 1000) / 1000;
 }
 
-async function getUserEmail(user_id) {
-  const [rows] = await db.query(
-    `SELECT name, email FROM users WHERE id = ? LIMIT 1`,
-    [user_id],
-  );
-  return rows[0] || null;
-}
-
 async function generateInvoicesForMonth(month) {
   const tariff = await invoiceModel.getTariffSettings();
   if (!tariff) throw httpError("Tariff settings not found (id=1)", 500);
@@ -69,12 +62,32 @@ async function generateInvoicesForMonth(month) {
     startDate,
     endDate,
   );
-  const due_date = calcDueDateUTC(month);
+  
+  if (!leases.length) return { month, leases_processed: 0 };
 
+  const roomIds = leases.map(l => l.room_id);
+  const userIds = [...new Set(leases.map(l => l.user_id))];
+
+  const [usageList, userList] = await Promise.all([
+    invoiceModel.findUsageMonthlyBulk(roomIds, month),
+    userModel.findByIds(userIds)
+  ]);
+
+  const usageMap = usageList.reduce((map, usage) => {
+    map[usage.room_id] = usage;
+    return map;
+  }, {});
+
+  const userMap = userList.reduce((map, user) => {
+    map[user.id] = user;
+    return map;
+  }, {});
+
+  const due_date = calcDueDateUTC(month);
   let processed = 0;
 
   for (const lease of leases) {
-    const usage = await invoiceModel.findUsageMonthly(lease.room_id, month);
+    const usage = usageMap[lease.room_id];
 
     const water_used_liter = toNumber3(usage?.water_used ?? 0);
     const water_used = toNumber3(water_used_liter / 1000);
@@ -100,57 +113,50 @@ async function generateInvoicesForMonth(month) {
       rent_amount + water_cost + elec_cost - discount_amount + fine_amount;
     const status = "unpaid";
 
-    await invoiceModel.upsertInvoice({
-      lease_id: lease.lease_id,
-      room_id: lease.room_id,
-      user_id: lease.user_id,
-      month,
-      due_date,
-      rent_amount,
-      water_used,
-      water_cost,
-      elec_used,
-      elec_cost,
-      fine_amount,
-      discount_percent,
-      discount_amount,
-      total_amount,
-      status,
-    });
-
-    // FCM Notification
     try {
-      const user = await userModel.findById(lease.user_id);
-      if (user?.fcm_token) {
-        sendNotification({
-          fcm_token: user.fcm_token,
-          title: "Tagihan Baru 📋",
-          body: `Tagihan bulan ${month} sebesar Rp${total_amount.toLocaleString('id-ID')} sudah tersedia.`,
-          data: { type: "invoice", month }
-        }).catch(err => console.error("FCM error:", err));
+      await invoiceModel.upsertInvoice({
+        lease_id: lease.lease_id,
+        room_id: lease.room_id,
+        user_id: lease.user_id,
+        month,
+        due_date,
+        rent_amount,
+        water_used,
+        water_cost,
+        elec_used,
+        elec_cost,
+        fine_amount,
+        discount_percent,
+        discount_amount,
+        total_amount,
+        status,
+      });
+
+      const user = userMap[lease.user_id];
+      if (user) {
+        if (user.fcm_token) {
+          sendNotification({
+            fcm_token: user.fcm_token,
+            title: "Tagihan Baru 📋",
+            body: `Tagihan bulan ${month} sebesar Rp${total_amount.toLocaleString('id-ID')} sudah tersedia.`,
+            data: { type: "invoice", month }
+          }).catch(err => logger.error(`[FCM] Error: ${err.message}`));
+        }
+
+        if (user.email) {
+          const { subject, html } = invoiceCreatedTemplate({
+            name: user.name,
+            month,
+            due_date,
+            total_amount,
+            room_number: lease.room_number,
+          });
+
+          await sendMail({ to: user.email, subject, html });
+        }
       }
-    } catch (e) {
-      console.error("Gagal ambil data user untuk FCM:", e);
-    }
-
-    try {
-      const user = await getUserEmail(lease.user_id);
-
-      if (user?.email) {
-        const { subject, html } = invoiceCreatedTemplate({
-          name: user.name,
-          month,
-          due_date,
-          total_amount,
-          room_number: lease.room_number,
-        });
-
-        await sendMail({ to: user.email, subject, html });
-      }
-    } catch (mailErr) {
-      console.error(
-        `[invoice] Gagal kirim email user ${lease.user_id}: ${mailErr.message}`,
-      );
+    } catch (err) {
+      logger.error(`[invoice] Gagal proses lease ${lease.lease_id}: ${err.message}`);
     }
 
     processed += 1;

@@ -3,6 +3,7 @@ const { runUsageMonthly } = require("./usageMonthly.job");
 const { generateInvoicesForMonth } = require("./invoiceMonthly.job");
 const { runOverdueInvoice } = require("./overdueInvoice.job");
 const logger = require("../config/logger");
+const db = require("../config/db");
 
 let isRunning = false;
 let isCurrentRunning = false;
@@ -106,6 +107,22 @@ async function runOverdueCheck() {
   }
 }
 
+async function runMeterReadingsCleanup() {
+  try {
+    logger.info("[scheduler] START meter_readings cleanup");
+    const [result] = await db.query(
+      `DELETE FROM meter_readings WHERE recorded_at < DATE_SUB(NOW(), INTERVAL 3 MONTH)`,
+    );
+    logger.info(
+      `[scheduler] Cleanup selesai — ${result.affectedRows} baris dihapus`,
+    );
+    return { deleted: result.affectedRows };
+  } catch (err) {
+    logger.error(`[scheduler] Cleanup error: ${err.message}`);
+    throw err;
+  }
+}
+
 function startScheduler() {
   const cronMonthlyBilling = getCronExpression(
     "CRON_MONTHLY_BILLING",
@@ -113,6 +130,7 @@ function startScheduler() {
   );
   const cronCurrentMonth = getCronExpression("CRON_CURRENT_MONTH", "0 1 * * *");
   const cronOverdue = getCronExpression("CRON_OVERDUE_CHECK", "0 7 * * *");
+  const cronCleanup = getCronExpression("CRON_CLEANUP", "0 3 1 * *"); // tiap tgl 1 jam 3 pagi
 
   cron.schedule(cronMonthlyBilling, async () => {
     const prevMonth = getPrevMonthYYYYMM();
@@ -131,10 +149,15 @@ function startScheduler() {
     await runOverdueCheck();
   });
 
+  cron.schedule(cronCleanup, async () => {
+    await runMeterReadingsCleanup();
+  });
+
   logger.info(`[scheduler] Cron scheduled:`);
   logger.info(`[scheduler]   - Monthly billing  : ${cronMonthlyBilling}`);
   logger.info(`[scheduler]   - Current month    : ${cronCurrentMonth}`);
   logger.info(`[scheduler]   - Overdue check    : ${cronOverdue}`);
+  logger.info(`[scheduler]   - Meter cleanup    : ${cronCleanup}`);
 }
 
 module.exports = {
@@ -142,5 +165,6 @@ module.exports = {
   runMonthlyBilling,
   runCurrentMonthUsage,
   runOverdueCheck,
+  runMeterReadingsCleanup,
   getStatus,
 };

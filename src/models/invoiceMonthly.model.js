@@ -56,6 +56,19 @@ async function findUsageMonthly(room_id, month) {
   return rows[0] || null;
 }
 
+async function findUsageMonthlyBulk(roomIds, month) {
+  if (!roomIds.length) return [];
+  const [rows] = await db.query(
+    `
+    SELECT room_id, water_used, elec_used
+    FROM usage_monthly
+    WHERE room_id IN (?) AND month = ?
+    `,
+    [roomIds, month],
+  );
+  return rows;
+}
+
 async function upsertInvoice({
   lease_id,
   room_id,
@@ -129,5 +142,6 @@ module.exports = {
   getTariffSettings,
   findLeasesOverlappingMonth,
   findUsageMonthly,
+  findUsageMonthlyBulk,
   upsertInvoice,
 };

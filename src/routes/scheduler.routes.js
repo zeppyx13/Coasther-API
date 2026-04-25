@@ -10,5 +10,6 @@ router.use(requireRole(["admin", "manager"]));
 router.get("/status", schedulerController.getJobStatus);
 router.post("/overdue", schedulerController.triggerOverdue);
 router.post("/billing", schedulerController.triggerBilling);
+router.post("/cleanup", schedulerController.triggerCleanup);
 
 module.exports = router;

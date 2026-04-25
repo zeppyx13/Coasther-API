@@ -5,6 +5,7 @@ const userModel = require("../models/user.model");
 const { sendMail } = require("../lib/mailer");
 const { paymentSuccessTemplate } = require("../lib/emailTemplates");
 const { sendNotification } = require("../lib/fcm-sender");
+const logger = require("../config/logger");
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -211,10 +212,10 @@ async function handleMidtransWebhook(notification) {
             title: "Pembayaran Berhasil ✅",
             body: `Pembayaran tagihan bulan ${invoice.month} sebesar Rp${updateData.amount.toLocaleString('id-ID')} telah diterima.`,
             data: { type: "payment" }
-          }).catch(err => console.error("FCM error:", err));
+          }).catch(err => logger.error(`[FCM] Error: ${err.message}`));
         }
       } catch (e) {
-        console.error("Gagal kirim FCM:", e);
+        logger.error(`[FCM] Gagal kirim: ${e.message}`);
       }
 
       if (invoice?.user_email) {
@@ -230,7 +231,7 @@ async function handleMidtransWebhook(notification) {
         await sendMail({ to: invoice.user_email, subject, html });
       }
     } catch (mailErr) {
-      console.error(
+      logger.error(
         `[payment] Gagal kirim email konfirmasi: ${mailErr.message}`,
       );
     }

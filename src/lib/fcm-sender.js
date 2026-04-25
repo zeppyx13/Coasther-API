@@ -25,7 +25,7 @@ async function sendNotification({ fcm_token, title, body, data = {} }) {
     });
     logger.info(`[FCM] Sent: ${title} → ${fcm_token.slice(0, 20)}...`);
   } catch (e) {
-    logger.error("[FCM] Error:", e.message);
+    logger.error(`[FCM] Error: ${e.message}`);
   }
 }
 

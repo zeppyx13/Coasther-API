@@ -16,6 +16,15 @@ async function findById(id) {
   return rows[0] || null;
 }
 
+async function findByIds(ids) {
+  if (!ids.length) return [];
+  const [rows] = await db.query(
+    "SELECT id, name, email, fcm_token FROM users WHERE id IN (?)",
+    [ids],
+  );
+  return rows;
+}
+
 async function createUser({
   name,
   email,
@@ -169,6 +178,7 @@ async function findAllWithFCMToken() {
 module.exports = {
   findByEmail,
   findById,
+  findByIds,
   createUser,
   updateById,
   setResetOtpByEmail,

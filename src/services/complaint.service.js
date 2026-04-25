@@ -116,10 +116,10 @@ async function updateComplaintAdmin(id, payload) {
         title: "Update Keluhan 🔔",
         body: `Status keluhan "${existing.title}" kamu diperbarui menjadi ${payload.status}.`,
         data: { type: "complaint" }
-      }).catch(err => logger.error("FCM error:", err));
+      }).catch(err => logger.error(`[FCM] Error: ${err.message}`));
     }
   } catch (e) {
-    logger.error("Gagal kirim FCM:", e);
+    logger.error(`[FCM] Gagal kirim: ${e.message}`);
   }
 
   return getComplaintDetailAdmin(id);

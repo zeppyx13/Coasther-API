@@ -2,6 +2,21 @@ const { GoogleGenAI } = require("@google/genai");
 const adminChatModel = require("../models/adminChat.model");
 const logger = require("../config/logger");
 
+let _contextCache = null;
+let _contextCachedAt = 0;
+const CONTEXT_TTL_MS = 5 * 60 * 1000; // 5 menit
+
+async function getCachedContext() {
+  if (_contextCache && Date.now() - _contextCachedAt < CONTEXT_TTL_MS) {
+    logger.info("[AdminChat] Dashboard context cache hit");
+    return _contextCache;
+  }
+  logger.info("[AdminChat] Fetching fresh dashboard context");
+  _contextCache = await adminChatModel.getDashboardContext();
+  _contextCachedAt = Date.now();
+  return _contextCache;
+}
+
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
   err.statusCode = statusCode;
@@ -130,7 +145,7 @@ async function adminChat({ question, conversationHistory = [] }) {
   logger.info(`[AdminChat] Question: "${question.slice(0, 100)}"`);
 
   // Ambil konteks data DB
-  const context = await adminChatModel.getDashboardContext();
+  const context = await getCachedContext();
   const systemPrompt = buildSystemPrompt(context);
 
   // Bangun history percakapan untuk multi-turn

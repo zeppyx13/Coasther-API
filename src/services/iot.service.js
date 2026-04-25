@@ -1,5 +1,6 @@
 const iotModel = require("../models/iot.model");
 const { client: mqttClient } = require("../config/mqtt");
+const logger = require("../config/logger");
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
   err.statusCode = statusCode;
@@ -149,7 +150,7 @@ async function sendRelayCommand({ roomId, command }) {
         return reject(e);
       }
 
-      console.log(`[RELAY] Published to ${topic}: ${command}`);
+      logger.info(`[RELAY] Published to ${topic}: ${command}`);
       resolve({
         room_id: roomId,
         room_topic_id: roomTopicId,

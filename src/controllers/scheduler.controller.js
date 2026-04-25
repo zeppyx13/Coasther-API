@@ -1,6 +1,6 @@
 const { ok, fail } = require("../utils/response");
 const { runOverdueInvoice } = require("../jobs/overdueInvoice.job");
-const { runMonthlyBilling, getStatus } = require("../jobs/scheduler");
+const { runMonthlyBilling, runMeterReadingsCleanup, getStatus } = require("../jobs/scheduler");
 
 let isManualRunning = false;
 let isOverdueRunning = false;
@@ -46,6 +46,15 @@ async function triggerBilling(req, res) {
   }
 }
 
+async function triggerCleanup(req, res) {
+  try {
+    const result = await runMeterReadingsCleanup();
+    return ok(res, result, "Cleanup selesai", 200);
+  } catch (err) {
+    return fail(res, err.message, err.statusCode || 500);
+  }
+}
+
 async function getJobStatus(req, res) {
   try {
     const status = getStatus();
@@ -55,4 +64,4 @@ async function getJobStatus(req, res) {
   }
 }
 
-module.exports = { triggerOverdue, triggerBilling, getJobStatus };
+module.exports = { triggerOverdue, triggerBilling, triggerCleanup, getJobStatus };
