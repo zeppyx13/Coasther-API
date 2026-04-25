@@ -2,8 +2,11 @@ const { GoogleGenAI } = require("@google/genai");
 const aiModel = require("../models/ai.model");
 const feeModel = require("../models/fee.model");
 const aiCacheModel = require("../models/aicache.model");
-const INSIGHT_TTL_HOURS = Number(process.env.INSIGHT_TTL_HOURS);
-const PREDICTION_TTL_HOURS = Number(process.env.PREDICTION_TTL_HOURS);
+const logger = require("../config/logger");
+
+const INSIGHT_TTL_HOURS = Number(process.env.INSIGHT_TTL_HOURS) || 12;
+const PREDICTION_TTL_HOURS = Number(process.env.PREDICTION_TTL_HOURS) || 6;
+
 // =====================================================
 // UTILITIES
 // =====================================================
@@ -152,14 +155,12 @@ function buildPredictionPrompt({
   roomPrice,
   tariff,
 }) {
-  // Konversi histori water dari liter → m³ untuk konsistensi dengan tariff
   const historyConverted = history.map((h) => ({
     month: h.month,
     water_used_m3: toNumber3(Number(h.water_used) / 1000),
     elec_used_kwh: toNumber3(Number(h.elec_used)),
   }));
 
-  // Konversi current month usage water liter → m³
   const currentConverted = currentUsage.map((c) => ({
     type: c.type,
     used_so_far:
@@ -314,47 +315,68 @@ async function generateRoomInsight({
   if (!forceRefresh) {
     const cached = await aiCacheModel.getCache(roomId, "insight");
     if (cached) {
-      console.log(`[AI] Insight cache hit — room ${roomId}`);
+      logger.info(`[AI] Insight cache hit — room ${roomId}`);
       return cached;
     }
   }
 
-  console.log(`[AI] Generating insight — room ${roomId}`);
+  const staleCache = await aiCacheModel.getCacheStale(roomId, "insight");
 
-  const [dailyRows, latestMeters] = await Promise.all([
-    aiModel.getDailyUsageByRoom(roomId, days),
-    aiModel.getLatestMetersByRoom(roomId),
-  ]);
+  logger.info(`[AI] Generating insight — room ${roomId}`);
 
-  if (!latestMeters.length) {
-    throw httpError("No active meters found for this room", 404);
+  try {
+    const [dailyRows, latestMeters] = await Promise.all([
+      aiModel.getDailyUsageByRoom(roomId, days),
+      aiModel.getLatestMetersByRoom(roomId),
+    ]);
+
+    if (!latestMeters.length) {
+      throw httpError("No active meters found for this room", 404);
+    }
+
+    const usageMap = buildUsageMap(dailyRows);
+    const electricStats = calcStats(usageMap.electric);
+    const waterStats = calcStats(usageMap.water);
+
+    const prompt = buildInsightPrompt({
+      roomId,
+      days,
+      latestMeters,
+      electricStats,
+      waterStats,
+      dailyUsage: usageMap,
+    });
+
+    const insight = await callGemini(prompt, insightSchema);
+
+    const result = {
+      room_id: Number(roomId),
+      period_days: Number(days),
+      latest_meters: latestMeters,
+      stats: { electric: electricStats, water: waterStats },
+      insight,
+    };
+
+    await aiCacheModel.setCache(roomId, "insight", result, INSIGHT_TTL_HOURS);
+    return result;
+  } catch (err) {
+    if (!err.statusCode || err.statusCode >= 500) {
+      logger.error(
+        `[AI] Insight generation failed room ${roomId}: ${err.message}`,
+      );
+
+      if (staleCache) {
+        logger.warn(
+          `[AI] Returning stale cache for room ${roomId} insight (Gemini unavailable)`,
+        );
+        return staleCache;
+      }
+
+      throw httpError("Layanan AI sedang sibuk, coba beberapa menit lagi", 503);
+    }
+
+    throw err;
   }
-
-  const usageMap = buildUsageMap(dailyRows);
-  const electricStats = calcStats(usageMap.electric);
-  const waterStats = calcStats(usageMap.water);
-
-  const prompt = buildInsightPrompt({
-    roomId,
-    days,
-    latestMeters,
-    electricStats,
-    waterStats,
-    dailyUsage: usageMap,
-  });
-  const insight = await callGemini(prompt, insightSchema);
-
-  const result = {
-    room_id: Number(roomId),
-    period_days: Number(days),
-    latest_meters: latestMeters,
-    stats: { electric: electricStats, water: waterStats },
-    insight,
-  };
-
-  await aiCacheModel.setCache(roomId, "insight", result, INSIGHT_TTL_HOURS);
-
-  return result;
 }
 
 async function generateRoomPrediction({ roomId, forceRefresh = false }) {
@@ -365,47 +387,68 @@ async function generateRoomPrediction({ roomId, forceRefresh = false }) {
   if (!forceRefresh) {
     const cached = await aiCacheModel.getCache(roomId, "prediction");
     if (cached) {
-      console.log(`[AI] Prediction cache hit — room ${roomId}`);
+      logger.info(`[AI] Prediction cache hit — room ${roomId}`);
       return cached;
     }
   }
 
-  console.log(`[AI] Generating prediction — room ${roomId}`);
+  const staleCache = await aiCacheModel.getCacheStale(roomId, "prediction");
 
-  const [history, currentUsage, roomPrice, tariff] = await Promise.all([
-    aiModel.getUsageHistory(roomId, 6),
-    aiModel.getCurrentMonthUsage(roomId),
-    aiModel.getRoomPrice(roomId),
-    feeModel.getfreequota(),
-  ]);
+  logger.info(`[AI] Generating prediction — room ${roomId}`);
 
-  if (!roomPrice) throw httpError("Room not found", 404);
+  try {
+    const [history, currentUsage, roomPrice, tariff] = await Promise.all([
+      aiModel.getUsageHistory(roomId, 6),
+      aiModel.getCurrentMonthUsage(roomId),
+      aiModel.getRoomPrice(roomId),
+      feeModel.getfreequota(),
+    ]);
 
-  const daysInfo = getDaysInfo();
-  const prompt = buildPredictionPrompt({
-    roomId,
-    history,
-    currentUsage,
-    daysInfo,
-    roomPrice,
-    tariff,
-  });
-  const prediction = await callGemini(prompt, predictionSchema);
+    if (!roomPrice) throw httpError("Room not found", 404);
 
-  const result = {
-    room_id: Number(roomId),
-    days_info: daysInfo,
-    prediction,
-  };
+    const daysInfo = getDaysInfo();
+    const prompt = buildPredictionPrompt({
+      roomId,
+      history,
+      currentUsage,
+      daysInfo,
+      roomPrice,
+      tariff,
+    });
 
-  await aiCacheModel.setCache(
-    roomId,
-    "prediction",
-    result,
-    PREDICTION_TTL_HOURS,
-  );
+    const prediction = await callGemini(prompt, predictionSchema);
 
-  return result;
+    const result = {
+      room_id: Number(roomId),
+      days_info: daysInfo,
+      prediction,
+    };
+
+    await aiCacheModel.setCache(
+      roomId,
+      "prediction",
+      result,
+      PREDICTION_TTL_HOURS,
+    );
+
+    return result;
+  } catch (err) {
+    if (!err.statusCode || err.statusCode >= 500) {
+      logger.error(
+        `[AI] Prediction generation failed room ${roomId}: ${err.message}`,
+      );
+
+      if (staleCache) {
+        logger.warn(
+          `[AI] Returning stale cache for room ${roomId} prediction (Gemini unavailable)`,
+        );
+        return staleCache;
+      }
+
+      throw httpError("Layanan AI sedang sibuk, coba beberapa menit lagi", 503);
+    }
+    throw err;
+  }
 }
 
 module.exports = {

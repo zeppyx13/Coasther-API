@@ -1,4 +1,3 @@
-// src/models/ai.model.js
 const db = require("../config/db");
 
 async function getDailyUsageByRoom(roomId, days = 30) {
@@ -42,12 +41,14 @@ async function getDailyUsageByRoom(roomId, days = 30) {
       WHERE m.room_id = ?
         AND m.is_active = 1
         AND mr.reading_value > 0
+        -- Filter +1 hari ekstra untuk cover "hari sebelumnya" dari range utama
+        AND mr.recorded_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
       GROUP BY DATE(mr.recorded_at), m.type
     ) prev ON prev.type = d.type
           AND prev.usage_date = DATE_SUB(d.usage_date, INTERVAL 1 DAY)
     ORDER BY d.usage_date ASC, d.type ASC
     `,
-    [roomId, days, roomId],
+    [roomId, days, roomId, days + 1],
   );
 
   return rows;
@@ -84,7 +85,6 @@ async function getLatestMetersByRoom(roomId) {
     [roomId],
   );
 
-  // Konversi water liter → m³ agar konsisten dengan unit yang tercatat di DB
   return rows.map((r) => ({
     ...r,
     latest_reading_value:
