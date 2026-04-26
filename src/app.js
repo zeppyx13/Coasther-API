@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const path = require("path");
-// routes
+// routes init
 const authRoutes = require("./routes/auth.routes");
 const roomRoutes = require("./routes/room.routes");
 const tenantRoutes = require("./routes/tenant.routes");
@@ -55,12 +55,12 @@ const {
 
 // LIMITER
 app.use(generalLimiter);
-// Specific limiters per route
+// Specific limiters
 app.use("/api/auth", authLimiter);
 app.use("/api/ai", aiLimiter);
 app.use("/api/scheduler", schedulerLimiter);
 app.use("/api/upload", uploadLimiter);
-// Serve static files dari folder public
+// Serve static files from /public
 app.use(
   "/public",
   (req, res, next) => {

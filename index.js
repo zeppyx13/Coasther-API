@@ -5,7 +5,7 @@ const app = require("./src/app");
 const db = require("./src/config/db");
 const { client: mqttClient, setIo } = require("./src/config/mqtt");
 const { startScheduler } = require("./src/jobs/scheduler");
-const logger = require("./src/config/logger"); // tambah ini
+const logger = require("./src/config/logger");
 const http = require("http");
 const { Server } = require("socket.io");
 

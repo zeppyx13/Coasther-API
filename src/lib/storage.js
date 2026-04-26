@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+const dotenv = require("dotenv");
+dotenv.config();
 
-const TOKEN_KEY = "coasther_token";
+const TOKEN_KEY = process.env.TOKEN_KEY;
 
 export async function saveToken(token) {
   await AsyncStorage.setItem(TOKEN_KEY, token);
