@@ -71,10 +71,7 @@ app.use(
 );
 // routes
 app.get("/", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Welcome to Coasther API",
-  });
+  res.status(200).sendFile(path.join(__dirname, "../index.html"));
 });
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
