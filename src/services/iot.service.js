@@ -14,18 +14,20 @@ async function ingestMeterReading({ meter, payload }) {
     throw httpError("Invalid reading_value", 400);
   }
 
-  const last = await iotModel.findLastReading(meter.id);
-
-  if (last && readingValue < Number(last.reading_value)) {
-    throw httpError("Reading value cannot be less than last reading", 400);
-  }
-
   let recordedAt = new Date();
   if (payload.recorded_at) {
     const parsed = new Date(payload.recorded_at);
     if (!Number.isNaN(parsed.getTime())) {
       recordedAt = parsed;
     }
+  }
+
+  const last = await iotModel.findLastReading(meter.id);
+
+  const isHistorical = last && recordedAt < new Date(last.recorded_at);
+
+  if (!isHistorical && last && readingValue < Number(last.reading_value)) {
+    throw httpError("Reading value cannot be less than last reading", 400);
   }
 
   const readingId = await iotModel.insertReading({
