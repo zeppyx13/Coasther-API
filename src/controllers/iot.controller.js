@@ -42,13 +42,17 @@ async function relayControl(req, res) {
       return fail(res, "Invalid room id", 400);
     }
 
-    const validCommands = ["relay_on", "relay_off", "reset_nvs"];
+    const validCommands = [
+      "relay_on",
+      "relay_off",
+      "reset_nvs",
+      "sync_ntp",
+      "reboot",
+      "clear_buf",
+      "status",
+    ];
     if (!validCommands.includes(command)) {
-      return fail(
-        res,
-        `Invalid command. Valid: ${validCommands.join(", ")}`,
-        400,
-      );
+      return fail(res, `Invalid command. Valid: ${validCommands.join(", ")}`, 400);
     }
 
     const result = await iotService.sendRelayCommand({ roomId, command });

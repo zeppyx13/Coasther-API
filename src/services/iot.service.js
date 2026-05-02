@@ -143,21 +143,23 @@ async function sendRelayCommand({ roomId, command }) {
     .replace("_electric", "");
 
   const topic = `coasther/device/${roomTopicId}/control`;
+  const secureCommand = `${command}:${process.env.MQTT_CMD_TOKEN}`;
 
   return new Promise((resolve, reject) => {
-    mqttClient.publish(topic, command, { qos: 1 }, (err) => {
+    mqttClient.publish(topic, secureCommand, { qos: 1 }, (err) => {
       if (err) {
         const e = new Error("Failed to publish MQTT command");
         e.statusCode = 502;
         return reject(e);
       }
 
-      logger.info(`[RELAY] Published to ${topic}: ${command}`);
+      logger.info(`[RELAY] Published to ${topic}: ${secureCommand}`);
       resolve({
         room_id: roomId,
         room_topic_id: roomTopicId,
         topic,
         command,
+        secure_command: secureCommand,
         sent_at: new Date().toISOString(),
       });
     });
