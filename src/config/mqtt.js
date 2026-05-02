@@ -28,6 +28,11 @@ client.on("connect", () => {
     if (err) logger.error("Subscribe telemetry error:", err);
     else logger.info("Subscribed to live telemetry");
   });
+
+  client.subscribe("coasther/device/+/log", (err) => {
+    if (err) logger.error("Subscribe log error:", err);
+    else logger.info("Subscribed to device logs");
+  });
 });
 
 client.on("message", async (topic, message) => {
@@ -97,6 +102,21 @@ client.on("message", async (topic, message) => {
         });
       }
 
+      return;
+    }
+
+    if (
+      parts.length === 4 &&
+      parts[0] === "coasther" &&
+      parts[1] === "device" &&
+      parts[3] === "log"
+    ) {
+      if (_io) {
+        _io.emit("iot_log", {
+          ...payload,
+          room_id: parts[2],
+        });
+      }
       return;
     }
 
