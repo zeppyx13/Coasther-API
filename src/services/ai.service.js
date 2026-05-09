@@ -4,8 +4,8 @@ const feeModel = require("../models/fee.model");
 const aiCacheModel = require("../models/aicache.model");
 const logger = require("../config/logger");
 
-const INSIGHT_TTL_HOURS = Number(process.env.INSIGHT_TTL_HOURS) || 12;
-const PREDICTION_TTL_HOURS = Number(process.env.PREDICTION_TTL_HOURS) || 6;
+const INSIGHT_TTL_HOURS = Number(process.env.INSIGHT_TTL_HOURS);
+const PREDICTION_TTL_HOURS = Number(process.env.PREDICTION_TTL_HOURS);
 
 // =====================================================
 // UTILITIES
@@ -34,6 +34,15 @@ function getDaysInfo() {
   const totalDays = new Date(year, month + 1, 0).getDate();
   const remaining = totalDays - today;
   return { today, totalDays, remaining };
+}
+
+// =====================================================
+// GEMINI SINGLETON
+// =====================================================
+const _aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+function getAiClient() {
+  return _aiClient;
 }
 
 // =====================================================
@@ -117,6 +126,26 @@ function buildInsightPrompt({
   waterStats,
   dailyUsage,
 }) {
+  // strip latestMeters to semantic fields only
+  const metersForPrompt = latestMeters.map((m) => ({
+    type: m.type,
+    latest_value: m.latest_value,
+    unit: m.unit,
+    recorded_at: m.recorded_at,
+  }));
+
+  // strip dailyUsage to date + usage_value only
+  const usageForPrompt = {
+    electric: dailyUsage.electric.map((d) => ({
+      date: d.date,
+      usage_value: d.usage_value,
+    })),
+    water: dailyUsage.water.map((d) => ({
+      date: d.date,
+      usage_value: d.usage_value,
+    })),
+  };
+
   return `
 Kamu adalah analis penggunaan utilitas untuk aplikasi kost Coasther.
 
@@ -132,7 +161,7 @@ Konteks:
 - periode_analisis_hari: ${days}
 
 latest_meters:
-${JSON.stringify(latestMeters, null, 2)}
+${JSON.stringify(metersForPrompt, null, 2)}
 
 electric_stats:
 ${JSON.stringify(electricStats, null, 2)}
@@ -141,19 +170,19 @@ water_stats:
 ${JSON.stringify(waterStats, null, 2)}
 
 daily_usage:
-${JSON.stringify(dailyUsage, null, 2)}
+${JSON.stringify(usageForPrompt, null, 2)}
 
 Keluarkan JSON yang sesuai schema.
 `;
 }
 
+// billing pre-calculated, passed as billingEstimate
 function buildPredictionPrompt({
   roomId,
   history,
   currentUsage,
   daysInfo,
-  roomPrice,
-  tariff,
+  billingEstimate,
 }) {
   const historyConverted = history.map((h) => ({
     month: h.month,
@@ -177,11 +206,8 @@ Tugas:
 1. Analisis histori pemakaian air dan listrik 6 bulan terakhir.
 2. Hitung rata-rata harian berdasarkan pemakaian bulan berjalan sampai hari ini.
 3. Prediksi total pemakaian air (m³) dan listrik (kWh) hingga akhir bulan.
-4. Hitung estimasi tagihan berdasarkan tarif berikut:
-   - Sewa bulanan  : Rp ${roomPrice?.price_monthly ?? 0}
-   - Air           : gratis ${tariff.waterQuota} m³ pertama, kelebihan Rp ${tariff.waterRate}/m³
-   - Listrik       : gratis ${tariff.electricQuota} kWh pertama, kelebihan Rp ${tariff.electricRate}/kWh
-5. Berikan confidence level prediksi (low/medium/high) berdasarkan konsistensi data histori.
+4. Berikan confidence level prediksi (low/medium/high) berdasarkan konsistensi data histori.
+5. Gunakan estimasi tagihan yang sudah dihitung sebagai konteks. Jangan menghitung ulang tarif.
 6. Jangan membuat angka baru selain dari kalkulasi data yang tersedia.
 
 Data:
@@ -195,34 +221,64 @@ ${JSON.stringify(historyConverted, null, 2)}
 Pemakaian bulan berjalan (sampai hari ini):
 ${JSON.stringify(currentConverted, null, 2)}
 
+Estimasi tagihan bulan ini (berdasarkan proyeksi pemakaian penuh):
+- Sewa          : Rp ${billingEstimate.rent.toLocaleString("id-ID")}
+- Air           : Rp ${billingEstimate.waterCost.toLocaleString("id-ID")}
+- Listrik       : Rp ${billingEstimate.elecCost.toLocaleString("id-ID")}
+- Total estimasi: Rp ${billingEstimate.estimatedTotal.toLocaleString("id-ID")}
+
 Keluarkan JSON sesuai schema yang diberikan.
 `;
 }
 
-// =====================================================
-// GEMINI CALL HELPER
-// =====================================================
-function getAiClient() {
-  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// GEMINI CALL WITH RETRY
+const RETRY_CONFIG = {
+  maxAttempts: process.env.GEMINI_MAX_ATTEMPTS,
+  baseDelayMs: process.env.GEMINI_BASE_DELAY_MS,
+  maxDelayMs: process.env.GEMINI_MAX_DELAY_MS,
+  retryableStatuses: new Set([429, 500, 502, 503, 504]),
+};
+
+function isRetryableError(err) {
+  if (!err.statusCode && !err.status) return true;
+  return RETRY_CONFIG.retryableStatuses.has(err.statusCode ?? err.status);
 }
 
-async function callGemini(prompt, schema) {
+async function callGeminiWithRetry(prompt, schema) {
   const client = getAiClient();
+  let lastErr;
 
-  const response = await client.models.generateContent({
-    model: process.env.GEMINI_MODEL,
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseJsonSchema: schema,
-    },
-  });
+  for (let attempt = 1; attempt <= RETRY_CONFIG.maxAttempts; attempt++) {
+    try {
+      const response = await client.models.generateContent({
+        model: process.env.GEMINI_MODEL,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseJsonSchema: schema,
+        },
+      });
+      try {
+        return JSON.parse(response.text);
+      } catch {
+        throw httpError("Gemini returned invalid JSON", 502);
+      }
+    } catch (err) {
+      lastErr = err;
+      if (!isRetryableError(err) || attempt === RETRY_CONFIG.maxAttempts) break;
 
-  try {
-    return JSON.parse(response.text);
-  } catch {
-    throw httpError("Gemini returned invalid JSON", 502);
+      const jitter = Math.random() * 300;
+      const delay = Math.min(
+        RETRY_CONFIG.baseDelayMs * 2 ** (attempt - 1) + jitter,
+        RETRY_CONFIG.maxDelayMs,
+      );
+      logger.warn(
+        `[AI] Gemini attempt ${attempt} failed (${err.message}), retry in ${Math.round(delay)}ms`,
+      );
+      await new Promise((r) => setTimeout(r, delay));
+    }
   }
+  throw lastErr;
 }
 
 // =====================================================
@@ -301,29 +357,11 @@ const predictionSchema = {
 };
 
 // =====================================================
-// MAIN FUNCTIONS
+// IN-FLIGHT DEDUPLICATION
 // =====================================================
-async function generateRoomInsight({
-  roomId,
-  days = 30,
-  forceRefresh = false,
-}) {
-  if (!roomId || Number.isNaN(Number(roomId))) {
-    throw httpError("Invalid room id", 400);
-  }
-
-  if (!forceRefresh) {
-    const cached = await aiCacheModel.getCache(roomId, "insight");
-    if (cached) {
-      logger.info(`[AI] Insight cache hit — room ${roomId}`);
-      return cached;
-    }
-  }
-
-  const staleCache = await aiCacheModel.getCacheStale(roomId, "insight");
-
-  logger.info(`[AI] Generating insight — room ${roomId}`);
-
+const _inFlight = new Map();
+const PROMPT_MAX_CHARS = process.env.PROMPT_MAX_CHARS;
+async function _doGenerateInsight({ roomId, days, staleCache }) {
   try {
     const [dailyRows, latestMeters] = await Promise.all([
       aiModel.getDailyUsageByRoom(roomId, days),
@@ -338,7 +376,7 @@ async function generateRoomInsight({
     const electricStats = calcStats(usageMap.electric);
     const waterStats = calcStats(usageMap.water);
 
-    const prompt = buildInsightPrompt({
+    let prompt = buildInsightPrompt({
       roomId,
       days,
       latestMeters,
@@ -347,7 +385,26 @@ async function generateRoomInsight({
       dailyUsage: usageMap,
     });
 
-    const insight = await callGemini(prompt, insightSchema);
+    //soft guard: trim to last 14 days if prompt too large
+    if (prompt.length > PROMPT_MAX_CHARS) {
+      logger.warn(
+        `[AI] Insight prompt too large (${prompt.length} chars) for room ${roomId}, trimming dailyUsage`,
+      );
+      const trimmedUsage = {
+        electric: usageMap.electric.slice(-14),
+        water: usageMap.water.slice(-14),
+      };
+      prompt = buildInsightPrompt({
+        roomId,
+        days,
+        latestMeters,
+        electricStats,
+        waterStats,
+        dailyUsage: trimmedUsage,
+      });
+    }
+
+    const insight = await callGeminiWithRetry(prompt, insightSchema);
 
     const result = {
       room_id: Number(roomId),
@@ -379,23 +436,7 @@ async function generateRoomInsight({
   }
 }
 
-async function generateRoomPrediction({ roomId, forceRefresh = false }) {
-  if (!roomId || Number.isNaN(Number(roomId))) {
-    throw httpError("Invalid room id", 400);
-  }
-
-  if (!forceRefresh) {
-    const cached = await aiCacheModel.getCache(roomId, "prediction");
-    if (cached) {
-      logger.info(`[AI] Prediction cache hit — room ${roomId}`);
-      return cached;
-    }
-  }
-
-  const staleCache = await aiCacheModel.getCacheStale(roomId, "prediction");
-
-  logger.info(`[AI] Generating prediction — room ${roomId}`);
-
+async function _doGeneratePrediction({ roomId, staleCache }) {
   try {
     const [history, currentUsage, roomPrice, tariff] = await Promise.all([
       aiModel.getUsageHistory(roomId, 6),
@@ -406,17 +447,37 @@ async function generateRoomPrediction({ roomId, forceRefresh = false }) {
 
     if (!roomPrice) throw httpError("Room not found", 404);
 
+    // Masalah 3 — pre-calculate billing in Node before building prompt
+    const waterM3 = toNumber3(
+      (currentUsage.find((c) => c.type === "water")?.used_so_far ?? 0) / 1000,
+    );
+    const elecKwh = toNumber3(
+      currentUsage.find((c) => c.type === "electric")?.used_so_far ?? 0,
+    );
+    const rent = toNumber(roomPrice.price_monthly);
+    const waterCost =
+      Math.max(0, waterM3 - toNumber(tariff.waterQuota)) *
+      toNumber(tariff.waterRate);
+    const elecCost =
+      Math.max(0, elecKwh - toNumber(tariff.electricQuota)) *
+      toNumber(tariff.electricRate);
+    const billingEstimate = {
+      rent,
+      waterCost: Math.round(waterCost),
+      elecCost: Math.round(elecCost),
+      estimatedTotal: Math.round(rent + waterCost + elecCost),
+    };
+
     const daysInfo = getDaysInfo();
     const prompt = buildPredictionPrompt({
       roomId,
       history,
       currentUsage,
       daysInfo,
-      roomPrice,
-      tariff,
+      billingEstimate,
     });
 
-    const prediction = await callGemini(prompt, predictionSchema);
+    const prediction = await callGeminiWithRetry(prompt, predictionSchema);
 
     const result = {
       room_id: Number(roomId),
@@ -449,6 +510,75 @@ async function generateRoomPrediction({ roomId, forceRefresh = false }) {
     }
     throw err;
   }
+}
+
+// =====================================================
+// PUBLIC FUNCTIONS
+// =====================================================
+async function generateRoomInsight({
+  roomId,
+  days = 30,
+  forceRefresh = false,
+}) {
+  if (!roomId || Number.isNaN(Number(roomId))) {
+    throw httpError("Invalid room id", 400);
+  }
+
+  if (!forceRefresh) {
+    const cached = await aiCacheModel.getCache(roomId, "insight");
+    if (cached) {
+      logger.info(`[AI] Insight cache hit — room ${roomId}`);
+      return cached;
+    }
+  }
+
+  // IN-FLIGHT DEDUPLICATION — check in-flight before fetching stale cache
+  const inflightKey = `insight:${roomId}`;
+  if (_inFlight.has(inflightKey)) {
+    logger.info(`[AI] Insight in-flight hit — room ${roomId}`);
+    return _inFlight.get(inflightKey);
+  }
+
+  const staleCache = await aiCacheModel.getCacheStale(roomId, "insight");
+  logger.info(`[AI] Generating insight — room ${roomId}`);
+
+  const promise = _doGenerateInsight({ roomId, days, staleCache }).finally(() =>
+    _inFlight.delete(inflightKey),
+  );
+
+  _inFlight.set(inflightKey, promise);
+  return promise;
+}
+
+async function generateRoomPrediction({ roomId, forceRefresh = false }) {
+  if (!roomId || Number.isNaN(Number(roomId))) {
+    throw httpError("Invalid room id", 400);
+  }
+
+  if (!forceRefresh) {
+    const cached = await aiCacheModel.getCache(roomId, "prediction");
+    if (cached) {
+      logger.info(`[AI] Prediction cache hit — room ${roomId}`);
+      return cached;
+    }
+  }
+
+  // IN-FLIGHT DEDUPLICATION — check in-flight before fetching stale cache
+  const inflightKey = `prediction:${roomId}`;
+  if (_inFlight.has(inflightKey)) {
+    logger.info(`[AI] Prediction in-flight hit — room ${roomId}`);
+    return _inFlight.get(inflightKey);
+  }
+
+  const staleCache = await aiCacheModel.getCacheStale(roomId, "prediction");
+  logger.info(`[AI] Generating prediction — room ${roomId}`);
+
+  const promise = _doGeneratePrediction({ roomId, staleCache }).finally(() =>
+    _inFlight.delete(inflightKey),
+  );
+
+  _inFlight.set(inflightKey, promise);
+  return promise;
 }
 
 module.exports = {
