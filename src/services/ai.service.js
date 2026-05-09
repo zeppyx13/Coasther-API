@@ -233,9 +233,9 @@ Keluarkan JSON sesuai schema yang diberikan.
 
 // GEMINI CALL WITH RETRY
 const RETRY_CONFIG = {
-  maxAttempts: process.env.GEMINI_MAX_ATTEMPTS,
-  baseDelayMs: process.env.GEMINI_BASE_DELAY_MS,
-  maxDelayMs: process.env.GEMINI_MAX_DELAY_MS,
+  maxAttempts: parseInt(process.env.GEMINI_MAX_ATTEMPTS) || 3,
+  baseDelayMs: parseInt(process.env.GEMINI_BASE_DELAY_MS) || 1000,
+  maxDelayMs: parseInt(process.env.GEMINI_MAX_DELAY_MS) || 10000,
   retryableStatuses: new Set([429, 500, 502, 503, 504]),
 };
 

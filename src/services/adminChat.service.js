@@ -9,9 +9,9 @@ const CONTEXT_TTL_MS = process.env.CONTEXT_TTL_MS || 5 * 60 * 1000;
 const _aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const RETRY_CONFIG = {
-  maxAttempts: process.env.GEMINI_MAX_ATTEMPTS,
-  baseDelayMs: process.env.GEMINI_BASE_DELAY_MS,
-  maxDelayMs: process.env.GEMINI_MAX_DELAY_MS,
+  maxAttempts: parseInt(process.env.GEMINI_MAX_ATTEMPTS) || 3,
+  baseDelayMs: parseInt(process.env.GEMINI_BASE_DELAY_MS) || 1000,
+  maxDelayMs: parseInt(process.env.GEMINI_MAX_DELAY_MS) || 10000,
   retryableStatuses: new Set([429, 500, 502, 503, 504]),
 };
 
