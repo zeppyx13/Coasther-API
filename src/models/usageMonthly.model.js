@@ -59,6 +59,19 @@ async function findLastReadingInRange(meter_id, start, end) {
   return rows[0] || null;
 }
 
+async function findAllReadingsInRange(meter_id, start, end) {
+  const [rows] = await db.query(
+    `
+    SELECT reading_value, recorded_at
+    FROM meter_readings
+    WHERE meter_id = ? AND recorded_at >= ? AND recorded_at < ?
+    ORDER BY recorded_at ASC, id ASC
+    `,
+    [meter_id, start, end],
+  );
+  return rows;
+}
+
 async function upsertUsageMonthly({
   room_id,
   month,
@@ -108,5 +121,6 @@ module.exports = {
   findLastReadingBefore,
   findFirstReadingInRange,
   findLastReadingInRange,
+  findAllReadingsInRange,
   upsertUsageMonthly,
 };

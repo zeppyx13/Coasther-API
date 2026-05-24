@@ -18,6 +18,20 @@ router.get(
   aiController.getRoomPrediction,
 );
 
+router.get(
+  "/rooms/:roomId/insight/stream",
+  auth,
+  requireRole(["admin", "manager", "tenant"]),
+  aiController.streamRoomInsight,
+);
+
+router.get(
+  "/rooms/:roomId/prediction/stream",
+  auth,
+  requireRole(["admin", "manager", "tenant"]),
+  aiController.streamRoomPrediction,
+);
+
 router.post(
   "/admin-chat",
   auth,

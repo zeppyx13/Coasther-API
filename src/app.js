@@ -28,7 +28,7 @@ const uploadRoutes = require("./routes/upload.routes");
 const notificationRoutes = require("./routes/notification.routes");
 // app init
 const app = express();
-
+app.set("trust proxy", 1);
 // Middleware
 const notFound = require("./middlewares/notFound.middleware");
 const errorHandler = require("./middlewares/error.middleware");
