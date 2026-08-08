@@ -2,7 +2,7 @@ const admin = require("firebase-admin");
 const logger = require("../config/logger");
 
 if (!admin.apps.length) {
-  const serviceAccount = require("../../coasther-firebase-adminsdk-fbsvc-f2c631db39.json");
+  const serviceAccount = require(`../../${process.env.FCM_ADMIN_SDK}`);
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });

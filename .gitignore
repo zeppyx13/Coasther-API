@@ -28,6 +28,6 @@ temp/
 logs/*
 public/assets/*
 public/img/*
-coasther-firebase-adminsdk-fbsvc-f2c631db39.json
+coasther-*.json
 Docs
 Docs/*
